@@ -1,0 +1,17 @@
+{
+  "id": "test-research",
+  "name": "Research Agent",
+  "did": "did:example:test-research",
+  "version": "0.1.0",
+  "description": "FICTIONAL test agent for local demo. Advertises crypto-research, web-research, and source-verification. Not a real network identity.",
+  "capabilities": [
+    {"id": "crypto-research", "category": "crypto-web3", "level": "advanced"},
+    {"id": "web-research", "category": "research", "level": "advanced"},
+    {"id": "source-verification", "category": "research", "level": "intermediate"}
+  ],
+  "protocols": ["http"],
+  "status": "online",
+  "endpoint": "https://example.invalid/agents/research",
+  "verification": {"status": "claimed"},
+  "fictional": true
+}

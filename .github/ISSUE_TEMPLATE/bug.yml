@@ -1,0 +1,24 @@
+name: Bug
+description: Something does not work as documented
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Actual vs expected. No secrets.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "0.1.0"
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Commands, HTTP calls, or a failing test. Never paste private keys.
+    validations:
+      required: true

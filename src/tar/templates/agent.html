@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ agent.name }} · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="fictional">FICTIONAL TEST AGENT</p>
+<h1>{{ agent.name }}</h1>
+<p class="note">{{ agent.id }} · version {{ agent.version }}</p>
+<dl>
+  <dt>DID</dt><dd><code>{{ agent.did }}</code></dd>
+  <dt>Status (client-reported)</dt><dd class="status">{{ agent.status }}</dd>
+  <dt>Verification</dt><dd>{{ agent.verification.status }} — claimed until evidence is reviewed by a future verifier. This registry does not auto-verify.</dd>
+  <dt>Endpoint</dt><dd>{{ agent.endpoint or "—" }}</dd>
+  <dt>Protocols</dt><dd>{{ agent.protocols | join(", ") }}</dd>
+</dl>
+<p>{{ agent.description }}</p>
+<h2>Capabilities</h2>
+<div class="chips">
+  {% for cap in agent.capabilities %}
+  <span class="chip">{{ cap.category }} / {{ cap.id }} · {{ cap.level }}</span>
+  {% endfor %}
+</div>
+<p><a href="/">← all agents</a> · <a href="/ui/swarms">swarms</a></p>
+{% endblock %}

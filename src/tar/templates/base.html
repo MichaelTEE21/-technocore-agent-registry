@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Technocore Agent Registry{% endblock %}</title>
+  <meta name="description" content="A swarm of agents that can be discovered and grouped by capability. Open-source reference implementation — not an official Technocore component.">
+  <meta property="og:title" content="Technocore Agent Registry">
+  <meta property="og:description" content="A swarm of agents that can be discovered and grouped by capability.">
+  <meta property="og:image" content="/static/og.png">
+  <link rel="icon" type="image/png" href="/static/logo.png">
+  <style>
+    :root {
+      --bg: #0d1114;
+      --panel: #141a1e;
+      --line: #243038;
+      --text: #e8eef2;
+      --muted: #8aa0ad;
+      --teal: #2ec4b6;
+      --amber: #e8a838;
+      --danger: #e85d4c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    a { color: var(--teal); text-decoration: none; }
+    a:hover { color: var(--amber); }
+    header {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.9rem 1.4rem;
+      border-bottom: 1px solid var(--line);
+      background: #10161a;
+    }
+    header img.logo { height: 48px; width: auto; }
+    header .brand { font-weight: 700; letter-spacing: .08em; }
+    header .brand small { display: block; font-weight: 500; letter-spacing: .18em; color: var(--muted); font-size: .7rem; }
+    nav { margin-left: auto; display: flex; gap: 1rem; font-size: .95rem; }
+    main { max-width: 1080px; margin: 0 auto; padding: 1.5rem; }
+    .hero {
+      display: grid; grid-template-columns: 1.1fr .9fr; gap: 1.5rem; align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .hero img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+    .note { color: var(--muted); font-size: .92rem; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.9rem;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+    .chip {
+      font-size: .75rem; padding: .2rem .5rem; border-radius: 999px;
+      border: 1px solid #2a4a48; color: var(--teal); background: #10201f;
+    }
+    .chip.amber { border-color: #4a3a20; color: var(--amber); background: #1e1810; }
+    form.search { display: flex; gap: .5rem; margin: 1rem 0 1.2rem; }
+    input[type=text] {
+      flex: 1; background: #0b1013; color: var(--text);
+      border: 1px solid var(--line); border-radius: 8px; padding: .55rem .7rem;
+    }
+    button, .btn {
+      background: linear-gradient(90deg, var(--teal), var(--amber));
+      color: #0b1013; border: 0; border-radius: 8px; padding: .55rem .9rem;
+      font-weight: 700; cursor: pointer;
+    }
+    footer { color: var(--muted); font-size: .8rem; padding: 2rem 1.4rem; text-align: center; }
+    .status { font-variant: small-caps; letter-spacing: .06em; }
+    .fictional { color: var(--amber); font-size: .75rem; letter-spacing: .08em; }
+    @media (max-width: 800px) { .hero { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/"><img class="logo" src="/static/logo.png" alt="Technocore Agent Registry"></a>
+    <div class="brand">TECHNOCORE<small>AGENT REGISTRY</small></div>
+    <nav>
+      <a href="/">Agents</a>
+      <a href="/ui/swarms">Swarms</a>
+      <a href="/docs">API</a>
+      <a href="/healthz">Health</a>
+    </nav>
+  </header>
+  <main>
+    {% block body %}{% endblock %}
+  </main>
+  <footer>
+    v{{ version }} · Open-source reference implementation · not an official Technocore component ·
+    a swarm of agents that can be discovered and grouped by capability
+  </footer>
+</body>
+</html>

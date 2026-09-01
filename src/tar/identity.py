@@ -1,0 +1,111 @@
+"""Identity providers. Public DIDs only — never private keys, seeds, or PEM material."""
+
+from __future__ import annotations
+
+import re
+from abc import ABC, abstractmethod
+
+# W3C did:key uses multibase base58btc (prefix `z`). Alphabet excludes 0 O I l.
+_DID_KEY_RE = re.compile(r"^did:key:z[1-9A-HJ-NP-Za-km-z]{32,128}$")
+_DID_EXAMPLE_RE = re.compile(r"^did:example:[A-Za-z0-9._:-]{1,200}$")
+
+# Substrings that indicate key material rather than a public identifier.
+_FORBIDDEN_FRAGMENTS = (
+    "private",
+    "secret",
+    "seed",
+    "mnemonic",
+    "begin ",
+    "-----",
+    "identity.pem",
+    "privkey",
+)
+
+
+class IdentityError(ValueError):
+    """Raised when a DID is not a public identifier this provider accepts."""
+
+
+class IdentityProvider(ABC):
+    """Validate a public DID string. Implementations must never accept key material."""
+
+    method: str
+
+    @abstractmethod
+    def validate_public_did(self, did: str) -> str:
+        """Return the normalized DID or raise IdentityError."""
+
+
+class DidKeyIdentityProvider(IdentityProvider):
+    """Accepts only public `did:key:...` strings via format check.
+
+    This provider never generates keys, never stores keys, and never inspects
+    key bytes beyond a conservative charset/length check.
+    """
+
+    method = "key"
+
+    def validate_public_did(self, did: str) -> str:
+        if not isinstance(did, str):
+            raise IdentityError("DID must be a string")
+        value = did.strip()
+        lower = value.lower()
+        for frag in _FORBIDDEN_FRAGMENTS:
+            if frag in lower:
+                raise IdentityError("DID must be a public identifier; key material is rejected")
+        if not value.startswith("did:key:"):
+            raise IdentityError("DidKeyIdentityProvider only accepts did:key public identifiers")
+        if _DID_KEY_RE.fullmatch(value) is None:
+            raise IdentityError("did:key failed public-identifier format check")
+        return value
+
+
+class ExampleDidIdentityProvider(IdentityProvider):
+    """Demo/test DID method `did:example:...`. Not a real network identifier."""
+
+    method = "example"
+
+    def validate_public_did(self, did: str) -> str:
+        if not isinstance(did, str):
+            raise IdentityError("DID must be a string")
+        value = did.strip()
+        lower = value.lower()
+        for frag in _FORBIDDEN_FRAGMENTS:
+            if frag in lower:
+                raise IdentityError("DID must be a public identifier; key material is rejected")
+        if _DID_EXAMPLE_RE.fullmatch(value) is None:
+            raise IdentityError("did:example failed public-identifier format check")
+        return value
+
+
+class CompositeIdentityProvider(IdentityProvider):
+    """Dispatch by DID method. Default: did:key + did:example (fictional tests)."""
+
+    method = "composite"
+
+    def __init__(self, providers: list[IdentityProvider] | None = None) -> None:
+        self.providers = providers or [
+            DidKeyIdentityProvider(),
+            ExampleDidIdentityProvider(),
+        ]
+
+    def validate_public_did(self, did: str) -> str:
+        if not isinstance(did, str) or ":" not in did:
+            raise IdentityError("DID must be a did:<method>:<id> public identifier")
+        parts = did.strip().split(":")
+        if len(parts) < 3 or parts[0] != "did":
+            raise IdentityError("DID must be a did:<method>:<id> public identifier")
+        method = parts[1]
+        last_error: IdentityError | None = None
+        for provider in self.providers:
+            if provider.method in {method, "composite"}:
+                try:
+                    return provider.validate_public_did(did)
+                except IdentityError as exc:
+                    last_error = exc
+        if last_error:
+            raise last_error
+        raise IdentityError(f"Unsupported DID method: {method}")
+
+
+default_identity_provider = CompositeIdentityProvider()

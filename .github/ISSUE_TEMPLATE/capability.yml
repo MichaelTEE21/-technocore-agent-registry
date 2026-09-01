@@ -1,0 +1,43 @@
+name: Capability
+description: Add or change a capability id in the taxonomy
+title: "[capability] "
+labels: ["taxonomy"]
+body:
+  - type: input
+    id: cap_id
+    attributes:
+      label: Capability id
+      placeholder: "e.g. literature-review"
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - crypto-web3
+        - research
+        - documents
+        - legal
+        - software
+        - data
+        - language
+        - agent-ops
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: One paragraph. Legal category must include the disclaimer reminder.
+    validations:
+      required: true
+  - type: checkboxes
+    id: protocol
+    attributes:
+      label: Protocol
+      options:
+        - label: New ids do not require a protocol version change
+          required: true
+        - label: agent-orchestration / task-delegation remain capability ids only (no messaging runtime)
+          required: true
