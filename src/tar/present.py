@@ -36,6 +36,7 @@ _AVATAR_PALETTES = (
     ("#a8c4d0", "#182228", "#5a8494"),
 )
 
+
 def short_did(did: str | None, head: int = 18, tail: int = 8) -> str:
     value = (did or "").strip()
     if len(value) <= head + tail + 1:
@@ -104,7 +105,6 @@ def network_graph(agents: list[Any], *, width: int = 560, height: int = 340) -> 
         pad = 28
         x = pad + (digest[0] / 255.0) * (width - pad * 2)
         y = pad + (digest[1] / 255.0) * (height - pad * 2)
-        # light jitter from later bytes so nearby hashes do not stack
         x = min(width - pad, max(pad, x + ((digest[2] % 13) - 6)))
         y = min(height - pad, max(pad, y + ((digest[3] % 13) - 6)))
         nodes.append(
@@ -149,6 +149,8 @@ def network_graph(agents: list[Any], *, width: int = 560, height: int = 340) -> 
 
 def registry_counts(db: Session) -> dict[str, int]:
     """Local SQLite counts only. Never invent activity."""
+    status_rows = db.execute(select(Agent.status, func.count()).group_by(Agent.status))
+    by_status = {str(status): int(n) for status, n in status_rows}
     return {
         "agents": int(db.scalar(select(func.count()).select_from(Agent)) or 0),
         "tasks": int(db.scalar(select(func.count()).select_from(Task)) or 0),
@@ -156,6 +158,10 @@ def registry_counts(db: Session) -> dict[str, int]:
         "capabilities": int(
             db.scalar(select(func.count(func.distinct(AgentCapability.capability_id)))) or 0
         ),
+        "online": by_status.get("online", 0),
+        "busy": by_status.get("busy", 0),
+        "offline": by_status.get("offline", 0),
+        "unknown": by_status.get("unknown", 0),
     }
 
 
@@ -194,3 +200,58 @@ def protocol_values(agents: list[Any]) -> list[str]:
         for proto in getattr(agent, "protocols", None) or []:
             found.add(str(proto))
     return sorted(found)
+
+
+def recent_activity(db: Session, *, limit: int = 12) -> list[dict[str, Any]]:
+    """Merge real recent tasks + contributions. Empty when the registry is quiet."""
+    events: list[dict[str, Any]] = []
+    for task in db.scalars(select(Task).order_by(Task.created_at.desc()).limit(limit)):
+        events.append(
+            {
+                "kind": "task",
+                "id": task.id,
+                "label": task.description or task.requested_capability or task.id,
+                "status": task.status,
+                "href": f"/ui/tasks/{task.id}",
+                "when": task.created_at,
+                "meta": f"{task.requester_id} → {task.assignee_id or 'unassigned'}",
+            }
+        )
+    for row in db.scalars(
+        select(Contribution).order_by(Contribution.created_at.desc()).limit(limit)
+    ):
+        events.append(
+            {
+                "kind": "contribution",
+                "id": str(row.id),
+                "label": row.event,
+                "status": row.verification_state,
+                "href": f"/ui/contributions/{row.id}",
+                "when": row.created_at,
+                "meta": row.agent_id,
+            }
+        )
+    events.sort(key=lambda e: e["when"] or 0, reverse=True)
+    return events[:limit]
+
+
+def registration_history(db: Session, *, limit: int = 50) -> list[dict[str, Any]]:
+    """Closest real analog to deployments: agent registration timestamps."""
+    rows = list(
+        db.scalars(select(Agent).order_by(Agent.created_at.desc()).limit(limit))
+    )
+    # reload with capabilities via separate query if needed — created_at only for list
+    out: list[dict[str, Any]] = []
+    for agent in rows:
+        out.append(
+            {
+                "id": agent.id,
+                "name": agent.name,
+                "did": agent.did,
+                "status": agent.status,
+                "fictional": agent.fictional.lower() != "false",
+                "created_at": agent.created_at,
+                "href": f"/ui/agents/{agent.id}",
+            }
+        )
+    return out

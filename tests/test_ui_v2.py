@@ -6,6 +6,10 @@ PAGES = (
     "/",
     "/ui/lookup",
     "/ui/agents",
+    "/ui/projects",
+    "/ui/deployments",
+    "/ui/settings",
+    "/ui/agents/new",
     "/ui/discover",
     "/ui/capabilities",
     "/ui/tasks",
@@ -36,7 +40,8 @@ def test_landing_hero_and_did_form(client):
     assert FORBIDDEN_DID not in body
     assert b"Give it a face" not in body
     assert b"Agent City" not in body
-
+    assert b"Registered" in body
+    
 
 def test_public_pages_ok_and_nav_targets(client):
     _seed(client)
@@ -45,6 +50,8 @@ def test_public_pages_ok_and_nav_targets(client):
         assert resp.status_code == 200, path
         assert FORBIDDEN_DID not in resp.content
         assert b"<nav" in resp.content
+        # sidebar shell present
+        assert b"sidebar" in resp.content or b"Overview" in resp.content
 
 
 def test_directory_and_profile_avatar(client):
@@ -61,6 +68,8 @@ def test_directory_and_profile_avatar(client):
     assert b"CLAIMED" in profile.content
     assert b"Proves" in profile.content
     assert b"Does not prove" in profile.content
+    assert b"Overview" in profile.content
+    assert b"Capabilities" in profile.content
 
 
 def test_capability_explorer_lists_advertisers(client):
@@ -132,3 +141,41 @@ def test_discover_filters_and_task_caption(client):
     assert b"valid signature proves control of identity" in page.content
     assert b"Copy task ID" in page.content
     assert b"REQUEST" in page.content
+
+
+def test_new_agent_flow_registers_and_redirects(client):
+    page = client.get("/ui/agents/new")
+    assert page.status_code == 200
+    assert b"Register an agent" in page.content
+    assert b"Public DID" in page.content
+    resp = client.post(
+        "/ui/agents/new",
+        data={
+            "name": "Wizard Agent",
+            "id": "ui-wizard-1",
+            "did": "did:example:ui-wizard-1",
+            "description": "FICTIONAL UI registration test",
+            "status": "online",
+            "fictional": "true",
+            "capability": ["python", "testing"],
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303, resp.text
+    assert resp.headers["location"] == "/ui/agents/ui-wizard-1"
+    profile = client.get("/ui/agents/ui-wizard-1")
+    assert profile.status_code == 200
+    assert b"Wizard Agent" in profile.content
+    assert b"did:example:ui-wizard-1" in profile.content
+    assert b"python" in profile.content
+
+
+def test_deployments_honest_registration_history(client):
+    _seed(client)
+    page = client.get("/ui/deployments")
+    assert page.status_code == 200
+    assert b"Registration history" in page.content
+    assert b"Registered" in page.content
+    assert b"Research Agent" in page.content
+    assert b"BUILDING" not in page.content
+    assert b"no cloud" in page.content.lower()

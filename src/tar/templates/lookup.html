@@ -4,13 +4,18 @@
 {% block body %}
 <p class="kicker">CONNECT AGENT</p>
 <p class="fictional">DEMO / FICTIONAL · PUBLIC DATA ONLY</p>
-<h1>Paste a public DID</h1>
-<p class="lede">Look up a public identifier. Never paste a private key, seed, or PEM.</p>
-<form class="did-form" method="get" action="/ui/lookup">
+<h1>Connect</h1>
+<p class="lede">Look up a public DID, connect an existing agent, or register a new one. Never paste a private key, seed, or PEM.</p>
+<div class="connect-choices">
+  <a class="card choice" href="/ui/lookup#did-form"><h3>Public DID lookup</h3><p class="note">Validate and find a public identifier in this local registry.</p></a>
+  <a class="card choice" href="/ui/agents"><h3>Connect existing</h3><p class="note">Browse registered agent cards and open a project page.</p></a>
+  <a class="card choice" href="/ui/agents/new"><h3>Create / Register</h3><p class="note">Multi-step registration via POST /agents. Public DID only.</p></a>
+</div>
+<form class="did-form" id="did-form" method="get" action="/ui/lookup">
   <input type="text" name="did" value="{{ did }}" placeholder="did:key:z6Mk..." autocomplete="off" spellcheck="false" aria-label="Paste a public DID">
   <button class="btn" type="submit">Look up</button>
 </form>
-<p class="note">Public DID only. Accepts public <code>did:key:...</code> and existing demo <code>did:example:...</code> ids. Not official Technocore. Not a token or airdrop claim.</p>
+<p class="note">Paste a public DID. Accepts public <code>did:key:...</code> and existing demo <code>did:example:...</code> ids. Not official Technocore. Not a token or airdrop claim.</p>
 
 {% if error %}
 <div class="card error-card">
@@ -32,6 +37,7 @@
   {% if proof_href %}
   <div class="card-actions">
     <a class="btn" href="{{ proof_href }}">Generate proof</a>
+    <a class="btn btn-ghost" href="/ui/agents/new">Register this DID</a>
   </div>
   <p class="note">Downloads a snapshot that the DID was format-checked here. Local registry only.</p>
   {% endif %}
@@ -91,5 +97,5 @@
   {{ proves("lookup") }}
 </div>
 {% endif %}
-<p class="note"><a href="/">← Network</a> · <a href="/ui/agents">Agents</a></p>
+<p class="note"><a href="/">← Overview</a> · <a href="/ui/agents">Agents</a></p>
 {% endblock %}

@@ -27,6 +27,8 @@ from tar.present import (
     evidence_label,
     network_graph,
     protocol_values,
+    recent_activity,
+    registration_history,
     registry_counts,
     short_did,
 )
@@ -170,6 +172,8 @@ def create_app() -> FastAPI:
                     "graph": network_graph(all_agents),
                     "counts": registry_counts(db),
                     "stats": card_stats(db, [a.id for a in listed]),
+                    "activity": recent_activity(db),
+                    "registrations": registration_history(db, limit=12),
                 },
             )
         finally:
@@ -285,6 +289,147 @@ def create_app() -> FastAPI:
         finally:
             db.close()
 
+    @app.get("/ui/projects", include_in_schema=False)
+    def projects_alias(request: Request):
+        return agents_directory(request)
+
+    @app.get("/ui/deployments", include_in_schema=False)
+    def deployments_page(request: Request):
+        db = get_session_factory()()
+        try:
+            return TEMPLATES.TemplateResponse(
+                request,
+                "deployments.html",
+                {
+                    "registrations": registration_history(db),
+                    "version": __version__,
+                },
+            )
+        finally:
+            db.close()
+
+    @app.get("/ui/settings", include_in_schema=False)
+    def settings_page(request: Request):
+        return TEMPLATES.TemplateResponse(
+            request,
+            "settings.html",
+            {"version": __version__},
+        )
+
+    @app.get("/ui/agents/new", include_in_schema=False)
+    def new_agent_page(request: Request):
+        return TEMPLATES.TemplateResponse(
+            request,
+            "agent_new.html",
+            {
+                "categories": all_categories(),
+                "status_options": _STATUS_OPTIONS,
+                "form": {},
+                "error": None,
+                "version": __version__,
+            },
+        )
+
+    @app.post("/ui/agents/new", include_in_schema=False)
+    async def new_agent_submit(request: Request):
+        from fastapi.responses import RedirectResponse
+        from pydantic import ValidationError
+        from starlette.exceptions import HTTPException as StarletteHTTPException
+
+        from tar.api import register_agent
+        from tar.schemas import AgentCreate, CapabilityClaim
+        from tar.taxonomy import CAPABILITY_INDEX
+
+        form = await request.form()
+        name = str(form.get("name") or "").strip()
+        agent_id = str(form.get("id") or "").strip()
+        did = str(form.get("did") or "").strip()
+        description = str(form.get("description") or "").strip()
+        endpoint_raw = str(form.get("endpoint") or "").strip()
+        endpoint = endpoint_raw or None
+        public_key_raw = str(form.get("public_key") or "").strip()
+        public_key = public_key_raw or None
+        status_v = str(form.get("status") or "unknown").strip() or "unknown"
+        fictional = "fictional" in form
+        caps_raw = form.getlist("capability") if hasattr(form, "getlist") else []
+        claims = []
+        for cid in caps_raw:
+            cid = str(cid).strip()
+            if not cid or cid not in CAPABILITY_INDEX:
+                continue
+            claims.append(
+                {
+                    "id": cid,
+                    "category": CAPABILITY_INDEX[cid]["category"],
+                    "level": "intermediate",
+                    "evidence_status": "claimed",
+                }
+            )
+        form_state = {
+            "name": name,
+            "id": agent_id,
+            "did": did,
+            "description": description,
+            "endpoint": endpoint_raw,
+            "public_key": public_key_raw,
+            "status": status_v,
+            "fictional": fictional,
+            "caps": [c["id"] for c in claims],
+        }
+
+        def _err(msg: str, code: int = 400):
+            return TEMPLATES.TemplateResponse(
+                request,
+                "agent_new.html",
+                {
+                    "categories": all_categories(),
+                    "status_options": _STATUS_OPTIONS,
+                    "form": form_state,
+                    "error": msg,
+                    "version": __version__,
+                },
+                status_code=code,
+            )
+
+        try:
+            payload = AgentCreate(
+                id=agent_id,
+                name=name,
+                did=did,
+                description=description,
+                endpoint=endpoint,
+                public_key=public_key,
+                status=status_v,  # type: ignore[arg-type]
+                fictional=fictional if fictional else True,
+                capabilities=[CapabilityClaim(**c) for c in claims],
+                protocols=["http"],
+            )
+        except ValidationError as exc:
+            msg = "; ".join(
+                f"{'.'.join(str(x) for x in err.get('loc', ()))}: {err.get('msg')}"
+                for err in exc.errors()[:6]
+            )
+            return _err(msg)
+
+        db = get_session_factory()()
+        try:
+            try:
+                out = register_agent(payload, db, None)
+            except StarletteHTTPException as exc:
+                detail = exc.detail
+                if isinstance(detail, dict):
+                    err = detail.get("error") if isinstance(detail.get("error"), dict) else detail
+                    if isinstance(err, dict):
+                        msg = str(err.get("message") or err)
+                    else:
+                        msg = str(detail)
+                else:
+                    msg = str(detail)
+                return _err(msg, exc.status_code)
+            return RedirectResponse(url=f"/ui/agents/{out.id}", status_code=303)
+        finally:
+            db.close()
+
     @app.get("/ui/agents/{agent_id}", include_in_schema=False)
     def agent_page(request: Request, agent_id: str):
         db = get_session_factory()()
@@ -315,6 +460,9 @@ def create_app() -> FastAPI:
                     .order_by(Task.created_at.desc())
                 )
             )
+            tab = (request.query_params.get("tab") or "overview").lower()
+            if tab not in {"overview", "activity", "tasks", "proofs", "capabilities", "settings"}:
+                tab = "overview"
             return TEMPLATES.TemplateResponse(
                 request,
                 "agent.html",
@@ -323,6 +471,7 @@ def create_app() -> FastAPI:
                     "metrics": metrics_for(db, agent),
                     "contributions": [contribution_to_out(c) for c in contribs[:20]],
                     "tasks": [task_to_out(t) for t in task_rows[:20]],
+                    "tab": tab,
                     "version": __version__,
                 },
             )
