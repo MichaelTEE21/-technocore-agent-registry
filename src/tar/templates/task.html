@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% block title %}{{ task.task_id }} · Task{% endblock %}
 {% block body %}
+<style>
+  .timeline { list-style: none; padding: 0; margin: 1rem 0 1.2rem 0.35rem; border-left: 2px solid var(--line); }
+  .timeline li { padding: 0.65rem 0 0.65rem 1.1rem; position: relative; }
+  .timeline li::before {
+    content: ""; position: absolute; left: -5px; top: 1.05rem;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--teal);
+  }
+  .sig-VALID { color: var(--teal); font-weight: 700; letter-spacing: .04em; }
+  .sig-INVALID { color: var(--danger); font-weight: 700; letter-spacing: .04em; }
+  .sig-UNSIGNED { color: var(--muted); font-weight: 700; letter-spacing: .04em; }
+</style>
 <h1>Task {{ task.task_id }}</h1>
 <dl>
   <dt>Status</dt><dd>{{ task.status }}</dd>
@@ -10,9 +21,25 @@
   <dt>Protocol</dt><dd>{{ task.protocol }}</dd>
   <dt>Description</dt><dd>{{ task.description }}</dd>
 </dl>
+<h2>Timeline</h2>
+<p class="note">Ordered envelopes: requester → target REQUEST, then accept, progress, result, verify. Signature VALID means the envelope matches the sender public key. Identity check ≠ signature valid ≠ agent verification status ≠ task complete ≠ result is true.</p>
+{% if timeline %}
+<ol class="timeline">
+  {% for event in timeline %}
+  <li>
+    <div><strong>{{ event.type }}</strong> · {{ event.from }} → {{ event.to }}</div>
+    <div class="note">{{ event.timestamp }} · <code>{{ event.message_id }}</code></div>
+    <div>signature: <span class="sig-{{ event.signature_status }}">{{ event.signature_status }}</span></div>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<p class="note">No messages recorded for this task yet.</p>
+{% endif %}
 {% if task.result %}
 <h2>Result</h2>
 <pre>{{ task.result }}</pre>
+<p class="note">A completed result is not a proof that the answer is correct.</p>
 {% endif %}
 <p><a href="/ui/tasks">← tasks</a></p>
 {% endblock %}

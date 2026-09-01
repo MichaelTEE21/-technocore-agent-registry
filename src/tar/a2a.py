@@ -12,6 +12,19 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+PROTOCOL_NAME = "tar.a2a"
+PROTOCOL_VERSION = "1.0"
+
+# Documented aliases for other-language clients. This registry speaks the enum values.
+MESSAGE_TYPE_ALIASES = {
+    "task.request": "REQUEST",
+    "task.accept": "ACCEPT",
+    "task.reject": "REJECT",
+    "task.progress": "PROGRESS",
+    "task.result": "RESULT",
+    "task.verify": "VERIFY",
+}
+
 
 class A2AMessageType(str, Enum):
     REQUEST = "REQUEST"

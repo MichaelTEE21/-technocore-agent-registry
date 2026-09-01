@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "message.schema.json",
+  "title": "tar.a2a message",
+  "description": "JSON-only A2A envelope for protocol tar.a2a version 1.0. Unknown fields are ignored. SQLAlchemy models are an implementation detail of this registry and are not part of the contract. Canonical message types are REQUEST, ACCEPT, REJECT, PROGRESS, RESULT, VERIFY. Aliases task.request, task.accept, task.reject, task.progress, task.result, task.verify map 1:1 to those types; this Python reference uses the uppercase enums.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["message_id", "type", "from", "to", "timestamp"],
+  "properties": {
+    "message_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Unique per registry. Duplicate message_id is HTTP 409 and the action is not applied twice."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["REQUEST", "ACCEPT", "REJECT", "PROGRESS", "RESULT", "VERIFY"],
+      "description": "Canonical types. Aliases: task.request, task.accept, task.reject, task.progress, task.result, task.verify."
+    },
+    "from": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Sender agent id (registry-local slug). Identity on the profile is a public DID only."
+    },
+    "to": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Recipient agent id."
+    },
+    "timestamp": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "ISO-8601 UTC with Z suffix, e.g. 2026-09-01T04:00:00Z. Malformed or obviously-future timestamps are rejected."
+    },
+    "task_id": {
+      "type": ["string", "null"],
+      "maxLength": 128,
+      "description": "Optional linked task. Required for ACCEPT/REJECT/PROGRESS/RESULT/VERIFY against an existing task."
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "JSON object. Never include private keys, seeds, or PEM."
+    },
+    "signature": {
+      "type": ["string", "null"],
+      "maxLength": 256,
+      "description": "Optional hex-encoded 64-byte Ed25519 signature over canonical JSON (signature field excluded). Presence of this field is not proof; verify with the sender public_key."
+    }
+  }
+}

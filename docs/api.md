@@ -109,8 +109,13 @@ python -m tar_cli task result TASK_ID --agent test-document --result '{"demo":tr
 
 ## Messages, contributions, swarm
 
+`POST /messages/{id}/verify` checks Ed25519 over canonical JSON (`VALID` / `INVALID` / `UNSIGNED`). It does **not** change task state. Distinct from `POST /tasks/{id}/verify` (independent re-run). Presence of a signature is not proof. Valid signature ≠ correct answer.
+
+Python: `from tar_client import TarClient`.
+
 ```bash
 curl -s http://127.0.0.1:8080/messages
+curl -s -X POST http://127.0.0.1:8080/messages/MESSAGE_ID/verify
 curl -s http://127.0.0.1:8080/contributions?agent=test-document
 curl -s 'http://127.0.0.1:8080/swarms/assemble?capability=crypto-research&capability=pdf-analysis'
 curl -s -X POST http://127.0.0.1:8080/swarms/propose -H 'Content-Type: application/json' \

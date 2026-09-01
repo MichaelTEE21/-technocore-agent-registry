@@ -18,11 +18,12 @@ from tar import __version__
 from tar.api import router
 from tar.config import load_settings
 from tar.db import get_session_factory, init_db
-from tar.models import Agent, Contribution, Swarm, Task
+from tar.models import Agent, Contribution, Message, Swarm, Task
 from tar.ranking import RANKING_DOC, rank_agents
 from tar.security import RequestLimitMiddleware, error_body
 from tar.serialize import agent_to_out, contribution_to_out, swarm_to_out, task_to_out
 from tar.taxonomy import all_categories, list_capabilities
+from tar.workflow import signature_status_for
 
 PACKAGE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(PACKAGE / "templates"))
@@ -292,10 +293,33 @@ def create_app() -> FastAPI:
                     {"message": f"Task {task_id} not found", "version": __version__},
                     status_code=404,
                 )
+            messages = list(
+                db.scalars(
+                    select(Message)
+                    .where(Message.task_id == task_id)
+                    .order_by(Message.created_at.asc(), Message.id.asc())
+                )
+            )
+            timeline = [
+                {
+                    "message_id": row.message_id,
+                    "type": row.type,
+                    "from": row.from_agent,
+                    "to": row.to_agent,
+                    "timestamp": row.timestamp,
+                    "signature_status": signature_status_for(db, row),
+                    "payload": row.payload_json,
+                }
+                for row in messages
+            ]
             return TEMPLATES.TemplateResponse(
                 request,
                 "task.html",
-                {"task": task_to_out(task), "version": __version__},
+                {
+                    "task": task_to_out(task),
+                    "timeline": timeline,
+                    "version": __version__,
+                },
             )
         finally:
             db.close()

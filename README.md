@@ -42,6 +42,31 @@ SQLite by default. A repository/session layer is Postgres-ready via `DATABASE_UR
 
 See [docs/architecture.md](docs/architecture.md) and [docs/protocol.md](docs/protocol.md).
 
+## A2A protocol (`tar.a2a` 1.0)
+
+JSON-only envelopes over HTTP. Another language can implement a client from [docs/protocol.md](docs/protocol.md) and the JSON Schemas in [docs/protocol/](docs/protocol/).
+
+- Message types: `REQUEST` `ACCEPT` `REJECT` `PROGRESS` `RESULT` `VERIFY` (aliases `task.request` … are documented; this Python registry uses the uppercase enum).
+- Task states: `requested` `accepted` `rejected` `in_progress` `completed` `failed` `verified` `disputed` — one state machine.
+- Identity is a **public DID** only. Signatures are Ed25519 over canonical JSON. Presence of a signature is not proof.
+- Duplicate `message_id` or `task_id` → HTTP 409 (local SQLite idempotency, **not** distributed consensus).
+- **Identity check ≠ signature valid ≠ agent verification status ≠ task complete ≠ result is true.** A valid signature does not mean the answer is correct.
+- `POST /messages/{id}/verify` checks the envelope. `POST /tasks/{id}/verify` is an independent re-run. They are not the same.
+
+Python library (`PYTHONPATH=src`):
+
+```python
+from tar_client import TarClient
+client = TarClient("http://127.0.0.1:8080")
+client.discover(["pdf-analysis"])
+task = client.create_task(requester="test-research", requested_capability="pdf-analysis", assignee="test-document")
+client.accept(task["task_id"], "test-document")
+client.verify_message(client.get_message(MESSAGE_ID))
+```
+
+Optional `--key-file` / `key_file=` for signing, same as the CLI. Private keys are never stored or printed.
+
+
 ## Quick start
 
 Python 3.12+ (3.13 is fine).
@@ -150,6 +175,7 @@ PYTHONPATH=src python scripts/demo_flow.py
 | GET | `/tasks`, `/tasks/{id}` | List / get |
 | POST | `/tasks/{id}/accept` `/reject` `/progress` `/result` `/fail` `/verify` `/dispute` | Strict transitions |
 | POST/GET | `/messages` | A2A envelopes |
+| POST | `/messages/{id}/verify` | Cryptographic envelope check (`VALID`/`INVALID`/`UNSIGNED`). Not task verify |
 | GET/POST | `/contributions` | Event log |
 | GET | `/swarms/assemble?capability=` | Proposed swarm; recommended vs executing |
 | POST | `/swarms/propose` | Multi-capability proposal |
@@ -193,7 +219,7 @@ Full curl/CLI examples: [docs/api.md](docs/api.md). Ranking rules: [docs/protoco
 - Metrics are counts. There is **no reputation score**.
 - Swarm propose/assemble is local only. Recommended ≠ executing.
 - Rate limit is in-process memory (one worker).
-- SQLite default; Postgres is a URL swap, not a shipped Alembic set.
+- SQLite default; Postgres is a URL swap, not a shipped Alembic set. Replay/idempotency is local to this database — not distributed consensus.
 - Demo agents, stats, and names are fictional.
 - Legal-category labels are research aids, not legal advice.
 

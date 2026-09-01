@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Protocol contract `tar.a2a` **1.0**: JSON Schemas in `docs/protocol/`, language-agnostic `docs/protocol.md`.
+- Task timeline on `/ui/tasks/{id}` with ordered events and signature `VALID` / `INVALID` / `UNSIGNED`.
+- Lightweight Python client `tar_client.TarClient` (discover, task actions, `verify_message` via `tar.crypto`).
+- Replay/idempotency documented: duplicate `message_id` / `task_id` → 409 (local SQLite, not consensus).
+- `POST /messages/{id}/verify` (envelope crypto only; distinct from `/tasks/{id}/verify`).
+- START.bat / START.ps1 banner **MANANZE — TECHNOCORE AGENT REGISTRY**; missing Python → "Please tell MANANZE."
 - Paste a public DID: `GET /lookup`, `/ui/lookup`, and `python -m tar_cli lookup`.
 - Downloadable public-profile proof snapshot (`tar.proof.profile.v1`) via `GET /proof` and `GET /agents/{id}/proof`. Records `profile_proof_generated` (not money). Private keys never included.
 

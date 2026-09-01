@@ -14,6 +14,7 @@ from tar.crypto import (
     SignatureError,
     canonical_message_bytes,
     resolve_verify_key,
+    verify,
     verify_or_raise,
 )
 from tar.models import (
@@ -202,6 +203,37 @@ def store_message(
     )
     db.add(row)
     return row
+
+
+def signature_status_for(db: Session, row: Message) -> str:
+    """VALID / INVALID / UNSIGNED. Presence of a signature is not proof."""
+    if not row.signature:
+        return "UNSIGNED"
+    sender = db.get(Agent, row.from_agent)
+    if sender is None:
+        return "INVALID"
+    try:
+        key = resolve_verify_key(sender.did, sender.public_key)
+    except SignatureError:
+        return "INVALID"
+    if key is None:
+        return "INVALID"
+    try:
+        payload = json.loads(row.payload_json or "{}")
+    except json.JSONDecodeError:
+        return "INVALID"
+    message = canonical_message_bytes(
+        message_id=row.message_id,
+        type=row.type,
+        from_agent=row.from_agent,
+        to_agent=row.to_agent,
+        timestamp=row.timestamp,
+        task_id=row.task_id,
+        payload=payload,
+    )
+    if verify(key, message, row.signature):
+        return "VALID"
+    return "INVALID"
 
 
 def create_task(

@@ -1,0 +1,13 @@
+{
+  "protocol": "tar.a2a",
+  "protocol_version": "1.0",
+  "encoding": "application/json",
+  "signature": "Ed25519 over canonical JSON",
+  "identity": "public DID only",
+  "timestamp": "ISO-8601 UTC Z",
+  "schemas": [
+    "message.schema.json",
+    "task.schema.json",
+    "error.schema.json"
+  ]
+}

@@ -29,3 +29,9 @@ Profile field `public_key` is hex-encoded 32-byte Ed25519. Messages are signed o
 - Not a DID resolver (until an adapter is provided)
 - Not a wallet
 - Not proof of control until a signature verifies
+
+## Distinguish
+
+**Identity check ≠ signature valid ≠ agent verification status ≠ task complete ≠ result is true.**
+
+A public DID format check is not proof of control. A valid Ed25519 signature is not a correct answer. Agent verification status is profile credence, not task completion.

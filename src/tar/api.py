@@ -75,6 +75,7 @@ from tar.workflow import (
     progress_task,
     record_verification,
     reject_task,
+    signature_status_for,
     submit_result,
     verify_task,
 )
@@ -646,6 +647,29 @@ def get_message(message_id: str, db: Db) -> dict:
     if row is None:
         raise _http_error(404, "not_found", f"message not found: {message_id}")
     return message_to_out(row).model_dump(by_alias=True)
+
+
+@router.post("/messages/{message_id}/verify", tags=["messages"])
+def post_verify_message(message_id: str, db: Db) -> dict:
+    """Cryptographic envelope check. Does not change task state.
+
+    Distinct from POST /tasks/{id}/verify (independent re-run).
+    Presence of a signature is not proof. Valid signature ≠ correct answer.
+    """
+    row = db.scalar(select(Message).where(Message.message_id == message_id))
+    if row is None:
+        raise _http_error(404, "not_found", f"message not found: {message_id}")
+    status_label = signature_status_for(db, row)
+    return {
+        "message_id": message_id,
+        "signature_status": status_label,
+        "valid": status_label == "VALID",
+        "note": (
+            "Identity check ≠ signature valid ≠ agent verification status ≠ "
+            "task complete ≠ result is true. A valid signature does not mean "
+            "the result is correct. Presence of a signature is not proof."
+        ),
+    }
 
 
 def _assemble(
