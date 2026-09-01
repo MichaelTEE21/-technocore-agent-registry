@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Settings · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">SETTINGS</p>
+<h1>Local demo</h1>
+<p class="lede">Informational only. This UI never requests, stores, or displays private keys, seeds, or PEM material. Public DID only.</p>
+<div class="card">
+  <dl class="facts">
+    <dt>Mode</dt><dd>Local registry reference · not a live decentralized network</dd>
+    <dt>Secrets</dt><dd>None collected in this UI. Never paste a private key.</dd>
+    <dt>Deployments</dt><dd>No cloud build pipeline — see <a href="/ui/deployments">registration history</a></dd>
+    <dt>API</dt><dd><a href="/docs">OpenAPI /docs</a></dd>
+    <dt>Protocol</dt><dd><a href="/ui/protocol">tar.a2a v1.0</a> (frozen)</dd>
+    <dt>Version</dt><dd>v{{ version }}</dd>
+  </dl>
+</div>
+{% endblock %}

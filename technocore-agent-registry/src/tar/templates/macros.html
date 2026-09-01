@@ -1,0 +1,97 @@
+{% macro avatar(seed, size=52) -%}
+{%- set a = avatar_spec(seed) -%}
+<svg class="avatar" width="{{ size }}" height="{{ size }}" viewBox="0 0 64 64" aria-hidden="true">
+  <rect width="64" height="64" rx="16" fill="{{ a.bg }}"/>
+  {% if a.motif == 0 %}
+  <circle cx="{{ a.cx }}" cy="{{ a.cy }}" r="{{ a.r }}" fill="{{ a.fg }}" opacity="0.9"/>
+  <circle cx="{{ 64 - a.cx }}" cy="{{ 64 - a.cy }}" r="{{ a.r - 4 }}" fill="{{ a.accent }}" opacity="0.85"/>
+  {% elif a.motif == 1 %}
+  <g transform="rotate({{ a.rot }} 32 32)">
+    <rect x="12" y="18" width="10" height="28" rx="3" fill="{{ a.fg }}"/>
+    <rect x="28" y="12" width="10" height="40" rx="3" fill="{{ a.accent }}"/>
+    <rect x="44" y="22" width="8" height="20" rx="3" fill="{{ a.fg }}" opacity="0.7"/>
+  </g>
+  {% elif a.motif == 2 %}
+  <polygon points="32,8 56,32 32,56 8,32" fill="{{ a.accent }}" opacity="0.85"/>
+  <circle cx="32" cy="32" r="10" fill="{{ a.fg }}"/>
+  {% else %}
+  <path d="M8 40 A24 24 0 0 1 56 40" fill="none" stroke="{{ a.fg }}" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="{{ a.cx }}" cy="24" r="8" fill="{{ a.accent }}"/>
+  {% endif %}
+</svg>
+{%- endmacro %}
+
+{% macro demo_flag(agent) -%}
+{% if agent.fictional %}<span class="flag">DEMO / FICTIONAL</span>{% endif %}
+{%- endmacro %}
+
+{% macro proves(kind="lookup") %}
+<aside class="proves" aria-label="What this shows">
+  <div>
+    <h3>What this shows</h3>
+    <h4>Proves</h4>
+    <ul>
+      <li>DID format is a public identifier.</li>
+      {% if kind != "lookup-unknown" %}
+      <li>A VALID signature means that key signed this payload.</li>
+      <li>Contribution records exist in this local registry.</li>
+      {% else %}
+      <li>The string passed a public-identifier format check.</li>
+      {% endif %}
+    </ul>
+  </div>
+  <div class="no">
+    <h3 class="faint">Limits</h3>
+    <h4>Does not prove</h4>
+    <ul>
+      <li>That the paster holds the key.</li>
+      <li>Official Technocore issuance.</li>
+      <li>That an answer is true.</li>
+      <li>Professional credentials.</li>
+      <li>Live network membership.</li>
+    </ul>
+  </div>
+</aside>
+{% endmacro %}
+
+{% macro agent_card(agent, stats=None) %}
+<article class="card">
+  <div class="identity-head">
+    {{ avatar(agent.did or agent.id, 48) }}
+    <div>
+      {{ demo_flag(agent) }}
+      <h2 style="margin:0.2rem 0 0.25rem;font-size:1.25rem;"><a href="/ui/agents/{{ agent.id }}">{{ agent.name }}</a></h2>
+      <div>
+        <span class="status-pill {{ agent.status }}">{{ agent.status }}</span>
+        <span class="credence">{{ agent.verification.status }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="id-row">
+    <code title="{{ agent.did }}">{{ agent.did | short_did }}</code>
+    <button type="button" class="copy" data-copy="{{ agent.did }}" data-label="Copy DID" aria-label="Copy DID">Copy DID</button>
+  </div>
+  <p class="note">{{ agent.description }}</p>
+  <div class="chips">
+    {% for cap in agent.capabilities %}
+    <a class="chip {{ cap.evidence_status | evidence_kind }}" href="/ui/capabilities/{{ cap.id }}">{{ cap.id }}</a>
+    {% endfor %}
+  </div>
+  {% if agent.protocols %}
+  <p class="meta">protocols: {{ agent.protocols | join(", ") }}</p>
+  {% endif %}
+  {% if stats %}
+  <p class="meta">tasks {{ stats.tasks }} · completed {{ stats.completed }} · contributions {{ stats.contributions }}</p>
+  {% endif %}
+  <div class="card-actions">
+    <a class="btn btn-ghost" href="/ui/agents/{{ agent.id }}">View Agent</a>
+  </div>
+</article>
+{% endmacro %}
+
+{% macro empty(title, body) %}
+<div class="empty">
+  <h2 style="margin-top:0;">{{ title }}</h2>
+  <p class="note">{{ body }}</p>
+</div>
+{% endmacro %}

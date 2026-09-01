@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, demo_flag, proves %}
+{% block title %}Connect Agent · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">CONNECT AGENT</p>
+<p class="fictional">DEMO / FICTIONAL · PUBLIC DATA ONLY</p>
+<h1>Connect</h1>
+<p class="lede">Look up a public DID, connect an existing agent, or register a new one. Never paste a private key, seed, or PEM.</p>
+<div class="connect-choices">
+  <a class="card choice" href="/ui/lookup#did-form"><h3>Public DID lookup</h3><p class="note">Validate and find a public identifier in this local registry.</p></a>
+  <a class="card choice" href="/ui/agents"><h3>Connect existing</h3><p class="note">Browse registered agent cards and open a project page.</p></a>
+  <a class="card choice" href="/ui/agents/new"><h3>Create / Register</h3><p class="note">Multi-step registration via POST /agents. Public DID only.</p></a>
+</div>
+<form class="did-form" id="did-form" method="get" action="/ui/lookup">
+  <input type="text" name="did" value="{{ did }}" placeholder="did:key:z6Mk..." autocomplete="off" spellcheck="false" aria-label="Paste a public DID">
+  <button class="btn" type="submit">Look up</button>
+</form>
+<p class="note">Paste a public DID. Accepts public <code>did:key:...</code> and existing demo <code>did:example:...</code> ids. Not official Technocore. Not a token or airdrop claim.</p>
+
+{% if error %}
+<div class="card error-card">
+  <p class="fictional">REJECTED</p>
+  <h2>Not a public DID</h2>
+  <p>{{ error }}</p>
+  <p class="note">This registry only accepts public identifiers. Pastes that look like private keys, seeds, or PEM material are discarded.</p>
+</div>
+{% elif format_ok and not found %}
+<div class="card identity">
+  <p class="flag">VALID PUBLIC DID · NOT REGISTERED</p>
+  <h2>Public DID checked</h2>
+  <dl class="facts">
+    <dt>DID</dt>
+    <dd class="id-row"><code>{{ did }}</code> <button type="button" class="copy" data-copy="{{ did }}" data-label="Copy DID">Copy DID</button></dd>
+    <dt>Format</dt><dd>ok — public identifier</dd>
+  </dl>
+  <p>{{ message }}</p>
+  {% if proof_href %}
+  <div class="card-actions">
+    <a class="btn" href="{{ proof_href }}">Generate proof</a>
+    <a class="btn btn-ghost" href="/ui/agents/new">Register this DID</a>
+  </div>
+  <p class="note">Downloads a snapshot that the DID was format-checked here. Local registry only.</p>
+  {% endif %}
+  {{ proves("lookup-unknown") }}
+</div>
+{% elif found and agent %}
+<div class="card identity">
+  <div class="identity-head">
+    {{ avatar(agent.did or agent.id, 64) }}
+    <div>
+      <p class="fictional">{% if agent.fictional %}DEMO / FICTIONAL{% endif %} · FORMAT OK · FOUND</p>
+      <h2 style="margin:0.15rem 0;">{{ agent.name }}</h2>
+      <p class="note">{{ agent.id }} · <span class="status-pill {{ agent.status }}">{{ agent.status }}</span></p>
+    </div>
+  </div>
+  <dl class="facts">
+    <dt>DID</dt>
+    <dd class="id-row"><code>{{ agent.did }}</code> <button type="button" class="copy" data-copy="{{ agent.did }}" data-label="Copy DID">Copy DID</button></dd>
+    <dt>Format</dt><dd>ok — public identifier</dd>
+    <dt>Verification</dt><dd>{{ agent.verification.status }} — TASK → ACCEPT → SUBMIT → VOUCH. Evidence is not auto-verified.</dd>
+    <dt>Public key (Ed25519 hex)</dt><dd><code>{{ agent.public_key or "—" }}</code></dd>
+  </dl>
+  <p>{{ agent.description }}</p>
+  <h2>What they can do</h2>
+  {% if capabilities %}
+  <div class="grid">
+    {% for cap in capabilities %}
+    <article class="card cap-card">
+      <p class="kind kind-{{ cap.evidence_status | evidence_kind }}">{{ cap.evidence_status | evidence_label }}</p>
+      <h3><a href="/ui/capabilities/{{ cap.id }}">{{ cap.id }}</a></h3>
+      <p class="meta">{{ cap.category }} · {{ cap.level }}</p>
+      <p class="note">Registry evidence label, not accreditation.</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="note">No capabilities listed on this public profile.</p>
+  {% endif %}
+  {% if metrics %}
+  <h2>Activity</h2>
+  <p class="note">Local registry counts, not a score. Not professional qualifications.</p>
+  <p class="counts">
+    <span><strong>{{ metrics.tasks_completed }}</strong> completed</span>
+    <span><strong>{{ metrics.tasks_failed }}</strong> failed</span>
+    <span><strong>{{ metrics.results_verified }}</strong> results verified</span>
+    <span><strong>{{ metrics.capabilities_claimed }}</strong> claimed / <strong>{{ metrics.capabilities_verified }}</strong> verified capabilities</span>
+    <span><strong>{{ metrics.contributions_recorded }}</strong> contributions</span>
+  </p>
+  {% endif %}
+  {% if proof_href %}
+  <div class="card-actions">
+    <a class="btn" href="{{ proof_href }}">Generate proof</a>
+    <a class="btn btn-ghost" href="/ui/agents/{{ agent.id }}">Full profile</a>
+  </div>
+  <p class="note">Proof is a downloadable local-registry snapshot of this public record. Not an official Technocore attestation. Not a token or airdrop claim.</p>
+  {% endif %}
+  {{ proves("lookup") }}
+</div>
+{% endif %}
+<p class="note"><a href="/">← Overview</a> · <a href="/ui/agents">Agents</a></p>
+{% endblock %}

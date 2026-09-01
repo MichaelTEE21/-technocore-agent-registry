@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}New Agent · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">NEW AGENT</p>
+<h1>Register an agent</h1>
+<p class="lede">Multi-step form posts to the existing <code>POST /agents</code> API. Public DID only — never paste a private key, seed, or PEM.</p>
+{% if error %}
+<div class="card error-card"><p class="fictional">REJECTED</p><p>{{ error }}</p></div>
+{% endif %}
+<form class="wizard" id="new-agent-form" method="post" action="/ui/agents/new" data-wizard>
+  <div class="wizard-steps" role="tablist">
+    <button type="button" class="wiz-tab is-on" data-step-btn="1">1 · Name</button>
+    <button type="button" class="wiz-tab" data-step-btn="2">2 · DID</button>
+    <button type="button" class="wiz-tab" data-step-btn="3">3 · Capabilities</button>
+    <button type="button" class="wiz-tab" data-step-btn="4">4 · Visibility</button>
+    <button type="button" class="wiz-tab" data-step-btn="5">5 · Review</button>
+  </div>
+
+  <section class="wizard-pane is-on" data-step="1">
+    <h2>Name</h2>
+    <label class="field">Display name
+      <input type="text" name="name" required maxlength="256" value="{{ form.name or '' }}" placeholder="Research Assistant">
+    </label>
+    <label class="field">Agent id
+      <input type="text" name="id" required maxlength="128" pattern="[A-Za-z0-9._:-]+" value="{{ form.id or '' }}" placeholder="my-agent">
+    </label>
+    <label class="field">Description
+      <textarea name="description" maxlength="4000" rows="3" placeholder="What this agent does (public)">{{ form.description or '' }}</textarea>
+    </label>
+    <div class="card-actions">
+      <button type="button" class="btn" data-next>Continue</button>
+    </div>
+  </section>
+
+  <section class="wizard-pane" data-step="2" hidden>
+    <h2>Public DID</h2>
+    <p class="note warn">Public identifier only. Accepts <code>did:key:...</code> and demo <code>did:example:...</code>. Never paste private key material.</p>
+    <label class="field">Public DID
+      <input type="text" name="did" required maxlength="512" value="{{ form.did or '' }}" placeholder="did:example:my-agent" autocomplete="off" spellcheck="false">
+    </label>
+    <label class="field">Optional public key (Ed25519 hex)
+      <input type="text" name="public_key" maxlength="128" value="{{ form.public_key or '' }}" placeholder="(optional)" autocomplete="off">
+    </label>
+    <label class="field">Endpoint (https)
+      <input type="text" name="endpoint" maxlength="1024" value="{{ form.endpoint or '' }}" placeholder="https://example.invalid/agent">
+    </label>
+    <div class="card-actions">
+      <button type="button" class="btn btn-ghost" data-prev>Back</button>
+      <button type="button" class="btn" data-next>Continue</button>
+    </div>
+  </section>
+
+  <section class="wizard-pane" data-step="3" hidden>
+    <h2>Capabilities</h2>
+    <p class="note">From the taxonomy. Claims start as CLAIMED — not auto-verified.</p>
+    <div class="cap-pick">
+      {% for cat in categories %}
+      <details class="card" open>
+        <summary>{{ cat.name }}</summary>
+        {% for cap in cat.capabilities %}
+        <label class="check">
+          <input type="checkbox" name="capability" value="{{ cap.id }}" data-category="{{ cat.id }}" {% if form.caps and cap.id in form.caps %}checked{% endif %}>
+          {{ cap.id }}
+        </label>
+        {% endfor %}
+      </details>
+      {% endfor %}
+    </div>
+    <div class="card-actions">
+      <button type="button" class="btn btn-ghost" data-prev>Back</button>
+      <button type="button" class="btn" data-next>Continue</button>
+    </div>
+  </section>
+
+  <section class="wizard-pane" data-step="4" hidden>
+    <h2>Visibility</h2>
+    <p class="note">No separate visibility column in schema. Demo / fictional flag is stored on the existing <code>fictional</code> field.</p>
+    <label class="check">
+      <input type="checkbox" name="fictional" value="true" {% if form.fictional is not defined or form.fictional %}checked{% endif %}>
+      Mark as DEMO / FICTIONAL (recommended for local demos)
+    </label>
+    <label class="field">Status
+      <select name="status">
+        {% for s in status_options %}
+        <option value="{{ s }}" {% if form.status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="card-actions">
+      <button type="button" class="btn btn-ghost" data-prev>Back</button>
+      <button type="button" class="btn" data-next>Continue</button>
+    </div>
+  </section>
+
+  <section class="wizard-pane" data-step="5" hidden>
+    <h2>Review</h2>
+    <p class="note">Submitting calls the same registration path as <code>POST /agents</code>. No private keys are accepted.</p>
+    <div id="review-box" class="card"><p class="meta">Confirm details above, then register.</p></div>
+    <div class="card-actions">
+      <button type="button" class="btn btn-ghost" data-prev>Back</button>
+      <button type="submit" class="btn">Register agent</button>
+    </div>
+  </section>
+</form>
+<p class="note"><a href="/ui/lookup">Connect existing</a> · <a href="/ui/agents">Agents</a></p>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block title %}Tasks · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">TASKS</p>
+<h1>Delegated work</h1>
+<p class="note">States: requested → accepted → in_progress → completed → verified. Strict transitions. Local records only.</p>
+{% if tasks %}
+<div class="stack tight">
+  {% for t in tasks %}
+  <article class="card">
+    <p class="flag">{{ t.status }}</p>
+    <h2 style="margin:0.2rem 0;font-size:1.15rem;"><a href="/ui/tasks/{{ t.task_id }}">{{ t.task_id }}</a></h2>
+    <p class="meta">{{ t.requested_capability }} · {{ t.requester }} → {{ t.assignee or "unassigned" }}</p>
+    <p class="note">{{ t.description or "" }}</p>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+  {{ empty("No tasks yet.", "Use the CLI or POST /tasks. Quiet registries stay empty on purpose.") }}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty, avatar %}
+{% block title %}Deployments · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">DEPLOYMENTS</p>
+<h1>Registration history</h1>
+<p class="lede">This reference implementation has <strong>no cloud CI / build pipeline</strong>. Agents register locally. The list below is registration history — labelled <strong>Registered</strong> only — this is not a cloud build or live deploy pipeline.</p>
+<p class="note">Local registry only · not live · no invented pipeline status.</p>
+{% if registrations %}
+<table>
+  <thead>
+    <tr><th>Event</th><th>Agent</th><th>Status</th><th>Registered at</th></tr>
+  </thead>
+  <tbody>
+    {% for r in registrations %}
+    <tr>
+      <td><span class="status-pill online">Registered</span></td>
+      <td>
+        <a href="{{ r.href }}">{{ r.name }}</a>
+        <div class="meta"><code>{{ r.id }}</code></div>
+      </td>
+      <td><span class="status-pill {{ r.status }}">{{ r.status }}</span>{% if r.fictional %} · DEMO / FICTIONAL{% endif %}</td>
+      <td class="meta">{{ r.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  {{ empty("No registrations yet.", "There is no cloud deploy system here. When agents POST /agents they appear as Registered.") }}
+{% endif %}
+<p class="note"><a href="/ui/agents/new">+ New Agent</a> · <a href="/ui/agents">Agents</a></p>
+{% endblock %}

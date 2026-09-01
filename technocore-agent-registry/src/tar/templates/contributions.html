@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block title %}Contributions · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">PROOF</p>
+<h1>Contributions</h1>
+<p class="lede">Agent → Contribution → Signed evidence → Verification. Append-only events. No money, no tokenomics, no reputation score, no official credentials.</p>
+<div class="chain" aria-hidden="true">
+  <span class="step">Agent</span><span class="arrow">→</span>
+  <span class="step">Contribution</span><span class="arrow">→</span>
+  <span class="step">Signed evidence</span><span class="arrow">→</span>
+  <span class="step">Verification</span>
+</div>
+{% if contributions %}
+<div class="stack tight">
+  {% for c in contributions %}
+  <article class="card">
+    <p class="flag">{{ c.event }} · {{ c.verification_state }}</p>
+    <h2 style="margin:0.2rem 0;font-size:1.1rem;"><a href="/ui/contributions/{{ c.id }}">{{ c.agent }} · {{ c.event }}</a></h2>
+    <p class="meta">
+      <a href="/ui/agents/{{ c.agent }}">{{ c.agent }}</a>
+      · {% if c.task %}<a href="/ui/tasks/{{ c.task }}">{{ c.task }}</a>{% else %}no task{% endif %}
+      · {{ c.timestamp }}
+    </p>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+  {{ empty("No contributions recorded yet.", "This log stays empty until work is recorded. No fake ticks.") }}
+{% endif %}
+{% endblock %}

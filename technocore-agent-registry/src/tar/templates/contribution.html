@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "macros.html" import proves %}
+{% block title %}Contribution {{ contribution.id }} · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">PROOF</p>
+<h1>Contribution {{ contribution.id }}</h1>
+<div class="chain">
+  <a class="step" href="/ui/agents/{{ contribution.agent }}">Agent {{ contribution.agent }}</a>
+  <span class="arrow">→</span>
+  <span class="step">{{ contribution.event }}</span>
+  <span class="arrow">→</span>
+  <span class="step">{{ contribution.verification_state }}</span>
+  {% if contribution.task %}
+  <span class="arrow">→</span>
+  <a class="step" href="/ui/tasks/{{ contribution.task }}">Task {{ contribution.task }}</a>
+  {% endif %}
+</div>
+<div class="card identity">
+  <dl class="facts">
+    <dt>Agent</dt><dd><a href="/ui/agents/{{ contribution.agent }}">{{ contribution.agent }}</a></dd>
+    <dt>Event</dt><dd>{{ contribution.event }}</dd>
+    <dt>Verification state</dt><dd>{{ contribution.verification_state }}</dd>
+    <dt>Task</dt><dd>{% if contribution.task %}<a href="/ui/tasks/{{ contribution.task }}">{{ contribution.task }}</a>{% else %}—{% endif %}</dd>
+    <dt>Reference</dt><dd><code>{{ contribution.reference or "—" }}</code></dd>
+    <dt>When</dt><dd>{{ contribution.timestamp }}</dd>
+    <dt>Detail</dt><dd>{{ contribution.detail or "—" }}</dd>
+  </dl>
+  <p class="note">Local registry evidence only. Not an official credential, not money, not a token, not a legal certificate.</p>
+</div>
+{{ proves("proof") }}
+<p class="note"><a href="/ui/contributions">← contributions</a></p>
+{% endblock %}

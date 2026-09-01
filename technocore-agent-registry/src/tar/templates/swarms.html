@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block title %}Swarms · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">SWARM · LOCAL PROPOSAL</p>
+<h1>Named swarms</h1>
+<p class="lede">A swarm is a named set of agent ids + required capabilities. Recommended candidates vs executing members are distinct. Local grouping only — not a live mesh.</p>
+<p><a href="/ui/discover">Discover by capability</a> to assemble a proposal.</p>
+{% if swarms %}
+  {% for swarm in swarms %}
+  <article class="card">
+    <h2>{{ swarm.name }}</h2>
+    <p class="note">{{ swarm.id }} · {{ swarm.member_agent_ids | length }} members</p>
+    <p>{{ swarm.description }}</p>
+    <h3>Required capabilities</h3>
+    <div class="chips">
+      {% for cap in swarm.required_capabilities %}
+      <a class="chip amber" href="/ui/capabilities/{{ cap }}">{{ cap }}</a>
+      {% endfor %}
+    </div>
+    <h3>Members</h3>
+    {% if swarm.members %}
+      {% for agent in swarm.members %}
+      <p><a href="/ui/agents/{{ agent.id }}">{{ agent.name }}</a> <span class="fictional">{% if agent.fictional %}DEMO{% endif %}</span> · {{ agent.status }} · {{ agent.did }}</p>
+      <div class="chips">
+        {% for cap in agent.capabilities %}
+        <a class="chip" href="/ui/capabilities/{{ cap.id }}">{{ cap.id }}</a>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="note">No member profiles loaded.</p>
+    {% endif %}
+  </article>
+  {% endfor %}
+{% else %}
+  {{ empty("No swarms yet.", "Seed the demo or POST /swarms/propose.") }}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Protocol tar.a2a 1.0 · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">PROTOCOL</p>
+<h1>tar.a2a v1.0</h1>
+<p class="lede">Human summary of the frozen v1 contract. <strong>docs/protocol.md</strong> and the JSON Schemas remain the source of truth.</p>
+<p class="note">JSON only at the HTTP boundary. Local registry log — not a live mesh, not distributed consensus. Identity is a public DID only.</p>
+<ul class="note">
+  <li><a href="/ui/protocol/schemas/protocol.json">protocol.json</a></li>
+  <li><a href="/ui/protocol/schemas/message.schema.json">message.schema.json</a></li>
+  <li><a href="/ui/protocol/schemas/task.schema.json">task.schema.json</a></li>
+  <li><a href="/ui/protocol/schemas/error.schema.json">error.schema.json</a></li>
+  <li><a href="/docs">OpenAPI</a></li>
+</ul>
+<h2>Message types</h2>
+<p class="stages"><span>REQUEST</span><span class="sep">→</span><span>ACCEPT</span><span class="sep">→</span><span>PROGRESS</span><span class="sep">→</span><span>RESULT</span><span class="sep">→</span><span>VERIFY</span></p>
+<p class="note">Also REJECT. Duplicate <code>message_id</code> or <code>task_id</code> → HTTP 409. Presence of a signature is not proof — it must verify.</p>
+<h2>Compact example</h2>
+<pre>{{ example | tojson(indent=2) }}</pre>
+<p class="note">Ed25519 over canonical JSON with <code>signature</code> excluded. Valid signature ≠ correct answer.</p>
+<p class="note">Five different facts: identity check ≠ signature valid ≠ agent verification status ≠ task complete ≠ result is true.</p>
+{% endblock %}

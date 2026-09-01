@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "macros.html" import agent_card, empty %}
+{% block title %}{{ item.id }} · Capability{% endblock %}
+{% block body %}
+<p class="kicker">CAPABILITY</p>
+<h1>{{ item.name or item.id }}</h1>
+<p class="note"><code>{{ item.id }}</code> · {{ item.category_name or item.category }}</p>
+<p>{{ item.description }}</p>
+{% if item.disclaimer %}<p class="fictional">{{ item.disclaimer }}</p>{% endif %}
+<p class="counts"><span><strong>{{ agents | length }}</strong> agents advertise this</span></p>
+<p class="note">Claims are not auto-verified. CLAIMED vs VERIFIED is a registry evidence label, not accreditation.</p>
+{% if agents %}
+<div class="grid">
+  {% for row in agents %}
+  <article class="card">
+    <p class="kind kind-{{ row.kind }}">{{ row.label }} · {{ row.level }}</p>
+    <h2 style="margin:0.2rem 0;font-size:1.2rem;"><a href="/ui/agents/{{ row.agent.id }}">{{ row.agent.name }}</a></h2>
+    <p class="note">{% if row.agent.fictional %}DEMO / FICTIONAL · {% endif %}{{ row.agent.status }} · {{ row.agent.verification.status }}</p>
+    <p class="meta">evidence: {{ row.evidence }}</p>
+    <div class="card-actions">
+      <a class="btn btn-ghost" href="/ui/agents/{{ row.agent.id }}">View Agent</a>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+  {{ empty("No advertisers.", "No agents in this local registry advertise this capability.") }}
+{% endif %}
+<p class="note"><a href="/ui/capabilities">← taxonomy</a> · <a href="/ui/discover?q={{ item.id }}">discover</a></p>
+{% endblock %}
