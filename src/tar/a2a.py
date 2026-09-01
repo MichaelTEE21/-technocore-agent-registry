@@ -1,14 +1,14 @@
-"""Agent-to-agent message *shapes* for a future task protocol.
+"""Agent-to-agent message types and local registry envelopes.
 
-This module is not a messaging network. It defines REQUEST / ACCEPT / REJECT /
-PROGRESS / RESULT / VERIFY envelopes so clients can agree on types later.
-Runtime delivery, inbox, and task delegation are FUTURE.
+This is a local log of REQUEST / ACCEPT / REJECT / PROGRESS / RESULT / VERIFY
+messages. It is not a live decentralized network. Delivery to remote hosts is
+out of scope; peers read and write the registry.
 """
 
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Protocol
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -23,22 +23,29 @@ class A2AMessageType(str, Enum):
 
 
 class A2AEnvelope(BaseModel):
-    """Typed envelope. Not transported by this registry."""
+    """Signed envelope stored by this local registry."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
+    message_id: str
     type: A2AMessageType
-    from_agent: str
-    to_agent: str
+    from_agent: str = Field(alias="from")
+    to_agent: str = Field(alias="to")
+    timestamp: str
     task_id: str | None = None
-    capability: str | None = None
     payload: dict[str, Any] = Field(default_factory=dict)
-    note: str = "FUTURE: this registry does not deliver A2A messages."
+    signature: str | None = None
+    note: str = (
+        "Local registry message. Generic Ed25519 signatures bind the envelope to "
+        "the sender public_key. Not a live mesh."
+    )
 
 
-class A2ATransport(Protocol):
-    """Interface a future messaging layer would implement. Unused in v0.1."""
+class A2ATransport:
+    """Optional adapter a future transport could implement. Unused for delivery."""
 
-    def send(self, envelope: A2AEnvelope) -> None: ...
+    def send(self, envelope: A2AEnvelope) -> None:  # noqa: ARG002
+        raise NotImplementedError("No remote A2A transport in this reference implementation.")
 
-    def poll(self, agent_id: str) -> list[A2AEnvelope]: ...
+    def poll(self, agent_id: str) -> list[A2AEnvelope]:  # noqa: ARG002
+        raise NotImplementedError("No remote A2A transport in this reference implementation.")

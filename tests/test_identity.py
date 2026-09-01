@@ -25,3 +25,14 @@ def test_composite_accepts_example_and_key():
     assert default_identity_provider.validate_public_did(
         "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
     )
+
+
+def test_composite_rejects_pem_and_private_paste():
+    with pytest.raises(IdentityError):
+        default_identity_provider.validate_public_did(
+            "-----BEGIN PRIVATE KEY-----\nMIGH\n-----END PRIVATE KEY-----"
+        )
+    with pytest.raises(IdentityError):
+        default_identity_provider.validate_public_did("private")
+    with pytest.raises(IdentityError):
+        default_identity_provider.validate_public_did("not-a-did")

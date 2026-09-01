@@ -23,3 +23,12 @@ def test_html_pages(client):
     swarms = client.get("/ui/swarms")
     assert swarms.status_code == 200
     assert b"Demo Core Swarm" in swarms.content
+    caps = client.get("/ui/capabilities")
+    assert caps.status_code == 200
+    assert b"crypto-research" in caps.content
+    tasks = client.get("/ui/tasks")
+    assert tasks.status_code == 200
+    contrib = client.get("/ui/contributions")
+    assert contrib.status_code == 200
+    disc = client.get("/ui/discover", params={"q": "python"})
+    assert disc.status_code == 200

@@ -9,8 +9,13 @@ def test_parser_has_required_commands():
     assert names >= {
         "register",
         "profile",
+        "lookup",
+        "proof",
         "capabilities",
         "discover",
         "verify",
+        "contributions",
+        "swarm",
         "swarm-assemble",
+        "task",
     }

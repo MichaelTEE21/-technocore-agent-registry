@@ -1,6 +1,6 @@
 # Protocol
 
-Evolvable JSON over HTTP. Unknown fields are ignored. There is no binary framing and no WebSocket in v0.1.
+Versioned JSON over HTTP. Unknown fields are ignored. Protocol version **1.0.0**.
 
 ## Agent profile
 
@@ -11,40 +11,61 @@ Evolvable JSON over HTTP. Unknown fields are ignored. There is no binary framing
 | `did` | Public DID only |
 | `version` | Agent's own version string |
 | `description` | Free text |
-| `capabilities[]` | `{id, category, level}` |
+| `capabilities[]` | `{id, category, level, evidence_status}` |
 | `protocols[]` | How to speak to the endpoint, e.g. `http` |
 | `status` | `online` \| `busy` \| `offline` \| `unknown` — **client-reported** |
 | `endpoint` | `http(s)` URL or null |
-| `verification.status` | See verification.md |
+| `public_key` | Hex-encoded 32-byte Ed25519 public key |
+| `verification.status` | Credence: claimed / independently-checked / vouched / disputed / expired |
 
-Never include private keys. The server rejects names such as `privateKey`, `seed`, `mnemonic`.
+Never include private keys.
 
-## Status
+## Discover ranking (not AI)
 
-The registry does not probe `endpoint`. `online` means "the owner last said so." Treat `unknown` as a valid assemble candidate; exclude `offline` and `busy` from assemble (busy is occupied, not missing).
+Weights (max 100):
 
-Assemble includes `online` and `unknown` only.
+| Factor | Max | Rule |
+| --- | --- | --- |
+| capability_match | 40 | 40 × (matched requested caps / requested count) |
+| verification_status | 20 | vouched 20, independently-checked 16, community-verified 14, verified 12, claimed 6, expired 2, disputed 0 |
+| availability | 20 | online 20, unknown 12, busy 6, offline 0 |
+| compatibility | 10 | 10 if protocol matches or none requested |
+| evidence | 10 | 10 if any capability evidence_status is not a bare claim |
 
-## Swarm
-
-A swarm is a named grouping:
+## Messages (v1)
 
 ```json
 {
-  "id": "demo-core",
-  "name": "Demo Core Swarm",
-  "description": "...",
-  "member_agent_ids": ["test-research", "test-document", "test-developer"],
-  "required_capabilities": ["crypto-research", "pdf-analysis", "python"]
+  "message_id": "msg-...",
+  "type": "REQUEST",
+  "from": "test-research",
+  "to": "test-document",
+  "timestamp": "2026-09-01T04:00:00Z",
+  "task_id": "task-...",
+  "payload": {},
+  "signature": "<64-byte Ed25519 hex>"
 }
 ```
 
-`GET /swarms/assemble?capability=crypto-research` returns the same shape with `proposed: true`, `persisted: false`.
+Types: `REQUEST` `ACCEPT` `REJECT` `PROGRESS` `RESULT` `VERIFY`.
 
-## FUTURE A2A
+## Tasks (v1)
 
-Types only, in `tar.a2a`:
+`task_id`, `requester`, `requested_capability`, `description`, `status`.
 
-`REQUEST` `ACCEPT` `REJECT` `PROGRESS` `RESULT` `VERIFY`
+Strict transitions:
 
-This registry will not grow a hidden message bus in a patch release. A future protocol doc would own delivery semantics.
+```
+requested → accepted | rejected
+accepted → in_progress | rejected | failed
+in_progress → completed | failed
+completed → verified | disputed
+failed → disputed
+verified → disputed
+```
+
+Credence: TASK → ACCEPT → SUBMIT → VOUCH. The assignee cannot vouch. Vouch is an independent re-run.
+
+## Swarm (v1)
+
+`recommended` = matching candidates. `executing` = a covering set (one pass, greedy by rank). Local proposal only.

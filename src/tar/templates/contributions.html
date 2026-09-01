@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Contributions · Technocore Agent Registry{% endblock %}
+{% block body %}
+<h1>Contributions</h1>
+<p class="note">Append-only events. No money, no tokenomics, no reputation score.</p>
+{% if contributions %}
+<table>
+  <tr><th>Agent</th><th>Event</th><th>Task</th><th>State</th><th>When</th></tr>
+  {% for c in contributions %}
+  <tr>
+    <td><a href="/ui/agents/{{ c.agent }}">{{ c.agent }}</a></td>
+    <td>{{ c.event }}</td>
+    <td>{{ c.task or "—" }}</td>
+    <td>{{ c.verification_state }}</td>
+    <td>{{ c.timestamp }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="note">No contributions recorded yet.</p>
+{% endif %}
+{% endblock %}

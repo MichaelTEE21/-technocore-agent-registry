@@ -3,12 +3,13 @@
 {% block body %}
 <section class="hero">
   <div>
-    <p class="fictional">SWARM · GROUPED BY CAPABILITY</p>
+    <p class="fictional">SWARM · LOCAL PROPOSAL</p>
     <h1>Named swarms</h1>
-    <p>A swarm is a named set of agent ids + required capabilities. This page lists example groupings — including the three fictional test agents. Actual messaging, inbox, and task delegation are <span class="chip amber">FUTURE</span>.</p>
+    <p>A swarm is a named set of agent ids + required capabilities. Recommended candidates vs executing members are distinct. Local grouping only — not a live mesh.</p>
   </div>
   <img src="/static/swarm.png" alt="Swarm of agents illustration">
 </section>
+<p><a href="/ui/discover">Discover by capability</a> to assemble a proposal.</p>
 {% if swarms %}
   {% for swarm in swarms %}
   <article class="card">
@@ -24,7 +25,7 @@
     <h3>Members</h3>
     {% if swarm.members %}
       {% for agent in swarm.members %}
-      <p><a href="/ui/agents/{{ agent.id }}">{{ agent.name }}</a> <span class="fictional">FICTIONAL</span> · {{ agent.status }} · {{ agent.did }}</p>
+      <p><a href="/ui/agents/{{ agent.id }}">{{ agent.name }}</a> <span class="fictional">{% if agent.fictional %}DEMO{% endif %}</span> · {{ agent.status }} · {{ agent.did }}</p>
       <div class="chips">
         {% for cap in agent.capabilities %}
         <span class="chip">{{ cap.id }}</span>
@@ -37,6 +38,6 @@
   </article>
   {% endfor %}
 {% else %}
-  <p class="note">No swarms yet. Seed the demo to create the example swarm of three fictional agents.</p>
+  <p class="note">No swarms yet. Seed the demo or POST /swarms/propose.</p>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}DID lookup · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="fictional">DEMO / FICTIONAL · PUBLIC DATA ONLY</p>
+<h1>Paste a public DID</h1>
+<p class="note">Format check of a public identifier, then a local SQLite lookup. Not an official Technocore attestation. Not a live network. Not a token or airdrop claim. Private keys are rejected.</p>
+<form class="search" method="get" action="/ui/lookup">
+  <input type="text" name="did" value="{{ did }}" placeholder="did:key:z6Mk..." autocomplete="off" spellcheck="false" aria-label="Paste a public DID">
+  <button type="submit">Look up</button>
+</form>
+
+{% if error %}
+<div class="card">
+  <p class="fictional">REJECTED</p>
+  <h2>Not a public DID</h2>
+  <p>{{ error }}</p>
+  <p class="note">This registry only accepts public identifiers (<code>did:key:...</code> or demo <code>did:example:...</code>). Pastes that look like private keys, seeds, or PEM material are discarded.</p>
+</div>
+{% elif format_ok and not found %}
+<div class="card">
+  <p class="fictional">FORMAT OK · NOT REGISTERED</p>
+  <h2>Public DID checked</h2>
+  <dl>
+    <dt>DID</dt><dd><code>{{ did }}</code></dd>
+    <dt>Format</dt><dd>ok — public identifier</dd>
+  </dl>
+  <p>{{ message }}</p>
+  {% if proof_href %}
+  <p><a class="btn" href="{{ proof_href }}">Generate proof</a></p>
+  <p class="note">Downloads a snapshot that the DID was format-checked here. Local registry only.</p>
+  {% endif %}
+</div>
+{% elif found and agent %}
+<div class="card">
+  <p class="fictional">{% if agent.fictional %}DEMO / FICTIONAL{% endif %} · FORMAT OK · FOUND</p>
+  <h2>{{ agent.name }}</h2>
+  <p class="note">{{ agent.id }} · <span class="status">{{ agent.status }}</span></p>
+  <dl>
+    <dt>DID</dt><dd><code>{{ agent.did }}</code></dd>
+    <dt>Format</dt><dd>ok — public identifier</dd>
+    <dt>Verification</dt><dd>{{ agent.verification.status }} — TASK → ACCEPT → SUBMIT → VOUCH. Evidence is not auto-verified.</dd>
+    <dt>Public key (Ed25519 hex)</dt><dd><code>{{ agent.public_key or "—" }}</code></dd>
+  </dl>
+  <p>{{ agent.description }}</p>
+  <h2>What they can do</h2>
+  {% if capabilities %}
+  <table>
+    <tr><th>Capability</th><th>Category</th><th>Level</th><th>Evidence</th></tr>
+    {% for cap in capabilities %}
+    <tr>
+      <td><code>{{ cap.id }}</code></td>
+      <td>{{ cap.category }}</td>
+      <td>{{ cap.level }}</td>
+      <td>{{ cap.evidence_status }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="note">No capabilities listed on this public profile.</p>
+  {% endif %}
+  {% if metrics %}
+  <h2>Metrics (counts, not a score)</h2>
+  <p class="note">Not professional qualifications. Local registry counts only.</p>
+  <ul>
+    <li>Tasks completed: {{ metrics.tasks_completed }}</li>
+    <li>Tasks failed: {{ metrics.tasks_failed }}</li>
+    <li>Results verified: {{ metrics.results_verified }}</li>
+    <li>Capabilities claimed / verified: {{ metrics.capabilities_claimed }} / {{ metrics.capabilities_verified }}</li>
+    <li>Contributions recorded: {{ metrics.contributions_recorded }}</li>
+  </ul>
+  {% endif %}
+  {% if proof_href %}
+  <p><a class="btn" href="{{ proof_href }}">Generate proof</a> · <a href="/ui/agents/{{ agent.id }}">Full profile</a></p>
+  <p class="note">Proof is a downloadable local-registry snapshot of this public record. Not an official Technocore attestation. Not a token or airdrop claim.</p>
+  {% endif %}
+</div>
+{% endif %}
+<p><a href="/">← all agents</a></p>
+{% endblock %}

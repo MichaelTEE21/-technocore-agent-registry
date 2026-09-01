@@ -1,82 +1,48 @@
 # Technocore Agent Registry
 
-**v0.1.0** — a swarm of agents that can be discovered and grouped by capability.
+**v1.0.0** — open-source reference implementation and proposal for agent capability discovery and collaboration within the Technocore ecosystem.
 
-An open-source reference implementation and proposal for agent capability discovery within the Technocore ecosystem. **Not an official Technocore component.**
+**Not an official Technocore component. Not a live decentralized network. Demo agents are fictional.**
 
 ![Technocore Agent Registry](docs/images/sales-hero.png)
 
-This registry is how a swarm finds members by capability. A **swarm** is a named set of agent ids plus the capabilities they must cover. Actual messaging, inboxes, and task delegation are **FUTURE** and are not implemented here.
+This local registry answers:
 
-Demo agents in this repository are **FICTIONAL**. They use `did:example:...` identifiers, not real network DIDs. Private keys are never accepted or stored.
+1. Which agents exist?
+2. What can they do?
+3. Can I verify identity and capability claims (format check + evidence + independent vouch — never auto-verified)?
+4. Can I delegate a task (REQUEST → ACCEPT → progress → RESULT → VERIFY)?
 
-## What / why
+Legal/regulatory capability ids are **research terminology only**. They are not a substitute for a qualified legal professional.
 
-Autonomous agents can advertise skills, but peers still need a shared, boring place to **look them up**. This project proposes:
+## What / why / problem
 
-1. A small HTTP profile for an agent (id, public DID, capabilities, client-reported status).
-2. A capability taxonomy that can grow without a protocol bump.
-3. Named **swarms** — groupings, not a runtime.
-4. Verification as *claimed vs evidence vs verified* — no auto-verify.
-5. An events table for future reputation — **no score** in v0.1.
+Autonomous agents advertise skills, but peers still need a shared, boring place to look them up and to leave an auditable record of delegated work. This project proposes:
 
-If you just need chat rooms, use Technocore itself. This registry is a **discovery proposal** that can sit beside it.
+1. A schema-validated agent profile (id, public DID, Ed25519 public key, capabilities, endpoint, client-reported status).
+2. A **data-driven taxonomy** (`src/tar/data/taxonomy.json`) that can grow without a protocol bump.
+3. Transparent **discovery ranking** (capability match, verification status, availability, protocol compatibility, evidence) — **no AI quality scores**.
+4. A local task and message log: REQUEST / ACCEPT / REJECT / PROGRESS / RESULT / VERIFY, with optional Ed25519 signatures.
+5. Credence **TASK → ACCEPT → SUBMIT → VOUCH**. An independent re-run is required before vouch. Capability claims are never auto-marked verified.
+6. Contribution events (not money, not a reputation score, not professional qualifications).
+7. Local **swarm proposals** that distinguish *recommended* candidates from an *executing* covering set.
 
-## Discovery
+If you just need chat rooms, use Technocore itself. This registry is a **discovery and collaboration proposal** that can sit beside it.
 
-Current flow (implemented):
+## Architecture
 
-```mermaid
-flowchart LR
-  A[Agent] -->|POST /agents public profile| R[Registry]
-  B[Peer] -->|GET /agents?capability=crypto-research| R
-  B -->|GET /swarms/assemble?capability=...| R
-  R -->|matching profiles, client-reported status| B
+```
+Agent (DID, capabilities, evidence, public key, endpoint)
+    → Registry (discover / search / match / verify)
+        → Other agent (request / accept / progress / result / verification)
+            → Contribution record
 ```
 
-A swarm assemble call returns agents whose **client-reported** status is `online` or `unknown`. The registry does **not** probe hosts or invent liveness.
+SQLite by default. A repository/session layer is Postgres-ready via `DATABASE_URL`. Private keys never enter the database.
 
-## Register
+See [docs/architecture.md](docs/architecture.md) and [docs/protocol.md](docs/protocol.md).
 
-```json
-{
-  "id": "test-research",
-  "name": "Research Agent",
-  "did": "did:example:test-research",
-  "version": "0.1.0",
-  "description": "FICTIONAL demo agent.",
-  "capabilities": [
-    {"id": "crypto-research", "category": "crypto-web3", "level": "advanced"}
-  ],
-  "protocols": ["http"],
-  "status": "online",
-  "endpoint": "https://example.invalid/agents/research",
-  "verification": {"status": "claimed"}
-}
-```
-
-`POST /agents` with that body. Extra fields are ignored so the schema can evolve. Payloads that look like private keys are rejected.
-
-## Search
-
-```http
-GET /agents?capability=crypto-research
-GET /agents?category=software
-GET /agents?status=online
-GET /swarms/assemble?capability=crypto-research
-```
-
-## Identity
-
-Public DIDs only. `DidKeyIdentityProvider` format-checks `did:key:z...` strings and never handles keys. Local fiction uses `did:example:...`. See [docs/identity.md](docs/identity.md).
-
-## Verification
-
-Statuses: `claimed`, `verified`, `community-verified`, `expired`, `disputed`.
-
-`POST /agents/{id}/verification` records a **claim**, **evidence URI**, or **dispute**. It does **not** promote an agent to `verified`. See [docs/verification.md](docs/verification.md).
-
-## Run locally
+## Quick start
 
 Python 3.12+ (3.13 is fine).
 
@@ -116,113 +82,133 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 Then open:
 
 - Demo UI: http://127.0.0.1:8080/
+- Capabilities: http://127.0.0.1:8080/ui/capabilities
+- Discover: http://127.0.0.1:8080/ui/discover
+- Tasks: http://127.0.0.1:8080/ui/tasks
+- Contributions: http://127.0.0.1:8080/ui/contributions
 - Swarms: http://127.0.0.1:8080/ui/swarms
 - OpenAPI: http://127.0.0.1:8080/docs
 - Health: http://127.0.0.1:8080/healthz
 
+### Paste a public DID
+
+On the home page, paste a public `did:key:...` or demo `did:example:...`. The registry checks it is a public identifier (private keys, seeds, and PEM are rejected), looks the agent up in this **local** SQLite registry, and shows what they can do (capabilities, verification, metrics). You can download a **proof snapshot** of that public record.
+
+This is a local reference registry — not official Technocore, not a live network, not a token claim, not an airdrop receipt.
+
+```bash
+curl -s 'http://127.0.0.1:8080/lookup?did=did:example:test-document'
+curl -s -OJ 'http://127.0.0.1:8080/proof?did=did:example:test-document'
+PYTHONPATH=src python -m tar_cli lookup did:example:test-document
+PYTHONPATH=src python -m tar_cli proof did:example:test-document
+```
+
 Copy `.env.example` to `.env` if you want a `REGISTRY_TOKEN`. When that variable is **unset**, mutating routes are open for a local demo. When it **is** set, send `X-Registry-Token`.
+
+`scripts/seed_demo.py` writes Ed25519 private keys only to gitignored `data/keys/*.key`. It never prints them. The registry stores **public** keys only.
+
+## Register / discover / delegate / verify / contribute / swarm
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m tar_cli --url http://127.0.0.1:8080 register examples/example-agent.json
+python -m tar_cli discover pdf-analysis
+python -m tar_cli profile test-document
+python -m tar_cli task create --requester test-research --assignee test-document --capability pdf-analysis --description "DEMO extract outline"
+python -m tar_cli task accept TASK_ID --agent test-document --key-file data/keys/test-document.key
+python -m tar_cli task result TASK_ID --agent test-document --result '{"demo":true}' --key-file data/keys/test-document.key
+python -m tar_cli verify test-document --kind evidence --summary "demo write-up" --evidence https://example.invalid/e
+python -m tar_cli contributions --agent test-document
+python -m tar_cli swarm crypto-research legal-research pdf-analysis
+```
+
+POSIX is the same with `PYTHONPATH=src python -m tar_cli ...`.
+
+In-process end-to-end (no server required):
+
+```bash
+PYTHONPATH=src python scripts/demo_flow.py
+```
 
 ## API
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| GET | `/healthz` | Liveness of *this process*, not of agents |
-| GET | `/docs` | FastAPI Swagger UI |
-| POST | `/agents` | Register |
-| GET | `/agents` | Filter `capability`, `category`, `status` |
+| GET | `/healthz` | Process liveness, not agent liveness |
+| GET | `/docs` | OpenAPI / Swagger |
+| GET | `/lookup?did=` | Public DID lookup (exact `agents.did` match). 400 if invalid or key-like |
+| GET | `/proof?did=` | Downloadable public-profile proof snapshot (`tar.proof.profile.v1`) |
+| GET | `/agents/{id}/proof` | Same proof by agent id when registered |
+| POST | `/agents` | Register a public profile |
+| GET | `/agents` | Filters: `capability`, `category`, `status`, `protocol`; `limit`/`offset` |
 | GET/PUT/DELETE | `/agents/{id}` | Profile |
+| GET | `/discover?capability=` | Repeatable. Transparent rank (documented) |
 | GET | `/capabilities` | Taxonomy |
-| GET | `/capabilities/{id}` | One cap |
-| GET/POST | `/agents/{id}/verification` | POST = claim/evidence only |
-| POST/GET | `/swarms` | Named swarm |
-| GET | `/swarms/{id}` | Swarm + members |
-| POST | `/swarms/{id}/members` | Add a member |
-| GET | `/swarms/assemble?capability=` | Proposed swarm, not persisted |
+| GET/POST | `/agents/{id}/verification` | Claim / evidence / independent-check / vouch / dispute |
+| GET | `/agents/{id}/metrics` | Counts, not a score |
+| POST | `/tasks` | Create |
+| GET | `/tasks`, `/tasks/{id}` | List / get |
+| POST | `/tasks/{id}/accept` `/reject` `/progress` `/result` `/fail` `/verify` `/dispute` | Strict transitions |
+| POST/GET | `/messages` | A2A envelopes |
+| GET/POST | `/contributions` | Event log |
+| GET | `/swarms/assemble?capability=` | Proposed swarm; recommended vs executing |
+| POST | `/swarms/propose` | Multi-capability proposal |
+| POST/GET | `/swarms` | Named grouping |
 
-Full notes: [docs/api.md](docs/api.md).
+Full curl/CLI examples: [docs/api.md](docs/api.md). Ranking rules: [docs/protocol.md](docs/protocol.md).
 
 ## CLI
 
-```bash
-# POSIX
-PYTHONPATH=src python -m tar_cli --url http://127.0.0.1:8080 capabilities
-PYTHONPATH=src python -m tar_cli discover crypto-research
-PYTHONPATH=src python -m tar_cli profile test-research
-PYTHONPATH=src python -m tar_cli verify test-research --kind evidence --summary "demo" --evidence https://example.invalid/e
-PYTHONPATH=src python -m tar_cli swarm-assemble crypto-research
-PYTHONPATH=src python -m tar_cli register examples/example-agent.json
-```
+`technocore-agent` (after install) or `python -m tar_cli`:
 
-```powershell
-# Windows PowerShell
-$env:PYTHONPATH = "src"
-python -m tar_cli --url http://127.0.0.1:8080 capabilities
-python -m tar_cli discover crypto-research
-python -m tar_cli profile test-research
-python -m tar_cli swarm-assemble crypto-research
-python scripts/technocore-agent profile test-research
-```
+- `register FILE`
+- `profile AGENT_ID`
+- `lookup DID` (public identifier only)
+- `proof DID` (prints public JSON; never keys)
+- `capabilities`
+- `discover CAP [CAP ...]`
+- `task create\|accept\|result`
+- `verify AGENT_ID`
+- `contributions`
+- `swarm CAP [CAP ...]` (alias: `swarm-assemble`)
 
-## Integrate
+`--help` on every command. `--key-file` points at a **local** gitignored private key; the CLI never prints it.
 
-```python
-import httpx
+## Security
 
-r = httpx.get("http://127.0.0.1:8080/agents", params={"capability": "crypto-research"})
-r.raise_for_status()
-print(r.json())
-```
+- Public profiles only. Payloads that look like private keys, seeds, or PEM are rejected.
+- Generic **Ed25519** sign/verify bound to `public_key` on the profile. Invalid signatures are rejected. Adapter point for a future Technocore DID resolver: `tar.crypto.TechnocoreDidAdapter` (returns `None` today).
+- Optional `REGISTRY_TOKEN` for mutating routes. Unset = open local demo.
+- Request size cap, in-process rate limit, safe JSON errors, pinned dependencies.
+- No PII collection. Fictional demo DIDs only (`did:example:test-*`).
+- See [SECURITY.md](SECURITY.md).
 
-See `examples/example-client.py`. Extra JSON fields on profiles are ignored.
+## Honest limitations
 
-## Tests
-
-```bash
-PYTHONPATH=src python -m pytest
-python scripts/demo_flow.py
-```
-
-```powershell
-$env:PYTHONPATH = "src"
-python -m pytest
-python scripts/demo_flow.py
-```
-
-## FUTURE task flow (not implemented)
-
-```mermaid
-flowchart TD
-  subgraph future [FUTURE — not in v0.1]
-    Q[Requester] -->|A2A REQUEST| M[Messaging plane]
-    M --> T[Worker]
-    T -->|ACCEPT or REJECT| M
-    T -->|PROGRESS / RESULT| M
-    Q -->|VERIFY| V[Verifier]
-  end
-  R[This registry] -.->|discovery only| Q
-```
-
-A2A types `REQUEST ACCEPT REJECT PROGRESS RESULT VERIFY` exist as **models** in `src/tar/a2a.py`. There is no inbox, no routing, no delegation runtime. Taxonomy ids `agent-orchestration` and `task-delegation` are capability labels only.
-
-## Limitations
-
-- SQLite default; Postgres is a `DATABASE_URL` swap, not a shipped migration set.
-- Status is whatever the client last sent.
-- No cryptographic signature check on profiles (DID is a public string).
-- No reputation score, no ranking.
-- No A2A transport.
-- Legal-category caps are **not legal advice** — see [docs/capabilities.md](docs/capabilities.md).
+- This is a **local reference implementation**, not a production mesh and not an official Technocore service.
+- Status (`online` / `busy` / `offline` / `unknown`) is whatever the client last sent. The registry does not probe hosts.
+- DID check is a **public-identifier format check**, not proof of control until a message is signed with the matching Ed25519 key.
+- Capability claims are never auto-verified. `verified` / `vouched` require an explicit independent check then vouch.
+- Discovery rank is a documented weighted sum, **not** quality, trust, or a professional credential.
+- Metrics are counts. There is **no reputation score**.
+- Swarm propose/assemble is local only. Recommended ≠ executing.
 - Rate limit is in-process memory (one worker).
-- Demo agents are fictional.
+- SQLite default; Postgres is a URL swap, not a shipped Alembic set.
+- Demo agents, stats, and names are fictional.
+- Legal-category labels are research aids, not legal advice.
+
+## Technocore integration
+
+Do not invent Technocore APIs. This project stores a public DID string plus an optional Ed25519 public key. A future adapter can resolve a Technocore DID to that key (`TechnocoreDidAdapter.resolve_public_key`). Until then, generic Ed25519 on the profile is the default. This repository does not claim endorsement.
 
 ## Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md). Short version: signed profiles, optional DID verify, community verification, then — later — a real A2A plane.
+See [docs/roadmap.md](docs/roadmap.md). Short version: optional DID resolution, Alembic migrations, community reviewer UX, documented reputation *ideas* (still not a hidden score).
 
-## Contribute
+## Contributing
 
 [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 MIT © 2026 MichaelTEE21. See [LICENSE](LICENSE).
 
-Further reading: [architecture](docs/architecture.md) · [protocol](docs/protocol.md) · [identity](docs/identity.md) · [verification](docs/verification.md) · [api](docs/api.md)
+Further reading: [architecture](docs/architecture.md) · [protocol](docs/protocol.md) · [identity](docs/identity.md) · [verification](docs/verification.md) · [api](docs/api.md) · [capabilities](docs/capabilities.md)

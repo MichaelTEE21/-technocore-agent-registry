@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Discover · Technocore Agent Registry{% endblock %}
+{% block body %}
+<h1>Discover</h1>
+<p class="note">Transparent rank: capability match, verification status, availability, protocol compatibility, evidence. No AI quality scores.</p>
+<form class="search" method="get" action="/ui/discover">
+  <input type="text" name="q" value="{{ query }}" placeholder="capability ids, comma-separated e.g. python,testing">
+  <button type="submit">Discover</button>
+</form>
+{% if items %}
+  {% for item in items %}
+  <article class="card">
+    <h2><a href="/ui/agents/{{ item.agent.id }}">{{ item.agent.name }}</a> · rank {{ item.rank }}</h2>
+    <p class="note">{{ item.agent.status }} · {{ item.agent.verification.status }} · matched: {{ item.matched | join(", ") }}</p>
+    <p class="note">breakdown: match {{ item.breakdown.capability_match }} · verification {{ item.breakdown.verification_status }} · availability {{ item.breakdown.availability }} · compatibility {{ item.breakdown.compatibility }} · evidence {{ item.breakdown.evidence }}</p>
+  </article>
+  {% endfor %}
+{% elif query %}
+  <p class="note">No matching demo agents.</p>
+{% endif %}
+{% endblock %}

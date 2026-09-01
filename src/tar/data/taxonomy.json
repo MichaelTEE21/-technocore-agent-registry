@@ -1,0 +1,424 @@
+{
+  "version": "1.0.0",
+  "levels": [
+    "beginner",
+    "intermediate",
+    "advanced",
+    "expert"
+  ],
+  "note": "Capability ids are stable strings. Adding an id does not change the wire protocol. This taxonomy is research terminology for discovery, not a license or credential.",
+  "categories": [
+    {
+      "id": "crypto-web3",
+      "name": "Crypto / Web3",
+      "description": "Public-chain research and read-only inspection. Never holds private keys or seeds.",
+      "capabilities": [
+        {
+          "id": "crypto-research",
+          "name": "Crypto research",
+          "description": "Market, protocol, and ecosystem research from public sources."
+        },
+        {
+          "id": "blockchain-research",
+          "name": "Blockchain research",
+          "description": "Describe public chain architecture, consensus, and history."
+        },
+        {
+          "id": "defi-analysis",
+          "name": "DeFi analysis",
+          "description": "Describe DeFi mechanisms from public documentation."
+        },
+        {
+          "id": "dex-analysis",
+          "name": "DEX analysis",
+          "description": "Describe public decentralized exchange mechanics and markets."
+        },
+        {
+          "id": "tokenomics-analysis",
+          "name": "Tokenomics analysis",
+          "description": "Classify public token supply, emission, and utility documentation. Not investment advice."
+        },
+        {
+          "id": "governance-analysis",
+          "name": "Governance analysis",
+          "description": "Summarize public on-chain or off-chain governance processes."
+        },
+        {
+          "id": "onchain-analysis",
+          "name": "On-chain analysis",
+          "description": "Read public chain state. No signing, no key custody."
+        },
+        {
+          "id": "wallet-analysis",
+          "name": "Wallet analysis",
+          "description": "Analyze public addresses only. Never request or store keys."
+        },
+        {
+          "id": "protocol-analysis",
+          "name": "Protocol analysis",
+          "description": "Compare public protocol designs and parameters."
+        },
+        {
+          "id": "smart-contract-analysis",
+          "name": "Smart contract analysis",
+          "description": "Read public contract source or bytecode for research. Not an audit certificate."
+        },
+        {
+          "id": "onchain-read",
+          "name": "On-chain read",
+          "description": "Alias for read-only public chain inspection. No key custody."
+        },
+        {
+          "id": "token-taxonomy",
+          "name": "Token taxonomy",
+          "description": "Classify tokens and protocols from public metadata."
+        },
+        {
+          "id": "defi-research",
+          "name": "DeFi research",
+          "description": "Alias for DeFi mechanism research from public docs."
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "name": "Research",
+      "description": "Open-web and literature research with source attribution.",
+      "capabilities": [
+        {
+          "id": "web-research",
+          "name": "Web research",
+          "description": "Gather and summarize publicly available information."
+        },
+        {
+          "id": "technical-research",
+          "name": "Technical research",
+          "description": "Investigate technical systems from public specs and docs."
+        },
+        {
+          "id": "academic-research",
+          "name": "Academic research",
+          "description": "Survey papers and scholarly public documents."
+        },
+        {
+          "id": "competitive-analysis",
+          "name": "Competitive analysis",
+          "description": "Compare public product and market positioning."
+        },
+        {
+          "id": "fact-checking",
+          "name": "Fact checking",
+          "description": "Compare statements to cited evidence."
+        },
+        {
+          "id": "source-verification",
+          "name": "Source verification",
+          "description": "Check claims against cited public sources."
+        },
+        {
+          "id": "literature-review",
+          "name": "Literature review",
+          "description": "Survey papers and long-form public documents."
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "name": "Documents",
+      "description": "Parse, extract, and summarize documents supplied by the caller.",
+      "capabilities": [
+        {
+          "id": "pdf-analysis",
+          "name": "PDF analysis",
+          "description": "Structure and inspect PDF content."
+        },
+        {
+          "id": "document-analysis",
+          "name": "Document analysis",
+          "description": "Inspect structure and claims in supplied documents."
+        },
+        {
+          "id": "document-extraction",
+          "name": "Document extraction",
+          "description": "Pull fields, tables, and entities from documents."
+        },
+        {
+          "id": "ocr",
+          "name": "OCR",
+          "description": "Optical character recognition on supplied images or scans."
+        },
+        {
+          "id": "summarization",
+          "name": "Summarization",
+          "description": "Produce shorter restatements of provided text."
+        },
+        {
+          "id": "document-comparison",
+          "name": "Document comparison",
+          "description": "Diff and compare two supplied documents."
+        },
+        {
+          "id": "data-extraction",
+          "name": "Data extraction",
+          "description": "Extract structured records from unstructured input."
+        },
+        {
+          "id": "report-generation",
+          "name": "Report generation",
+          "description": "Assemble a report from supplied findings."
+        }
+      ]
+    },
+    {
+      "id": "legal",
+      "name": "Legal / regulatory research",
+      "description": "Legal and regulatory *research assistance* only. Not legal advice.",
+      "disclaimer": "Legal/regulatory research terminology only. This is not a substitute for a qualified legal professional. Capabilities in this category are research and drafting aids. They are not a lawyer, they do not form an attorney-client relationship, and their output is not legal advice. A qualified professional in the relevant jurisdiction must review any matter that has legal consequences.",
+      "capabilities": [
+        {
+          "id": "legal-research",
+          "name": "Legal research",
+          "description": "Find publicly available statutes, cases, and commentary. Not legal advice."
+        },
+        {
+          "id": "legal-document-analysis",
+          "name": "Legal document analysis",
+          "description": "Highlight structure in a supplied legal-looking document. Not a legal opinion."
+        },
+        {
+          "id": "contract-analysis",
+          "name": "Contract analysis",
+          "description": "Highlight clauses in a supplied draft. Not a legal opinion."
+        },
+        {
+          "id": "regulatory-research",
+          "name": "Regulatory research",
+          "description": "Map a description to publicly documented regulations. Not a determination."
+        },
+        {
+          "id": "compliance-research",
+          "name": "Compliance research",
+          "description": "Map a description to public policy checklists. Not a determination."
+        },
+        {
+          "id": "privacy-research",
+          "name": "Privacy research",
+          "description": "Summarize public privacy-law materials. Not legal advice."
+        },
+        {
+          "id": "intellectual-property-research",
+          "name": "Intellectual property research",
+          "description": "Find public IP commentary. Not a patent or trademark opinion."
+        },
+        {
+          "id": "contract-review",
+          "name": "Contract review",
+          "description": "Alias for highlighting clauses in a supplied draft. Not a legal opinion."
+        },
+        {
+          "id": "compliance-check",
+          "name": "Compliance check",
+          "description": "Alias for public policy checklist mapping. Not a determination."
+        }
+      ]
+    },
+    {
+      "id": "software",
+      "name": "Software",
+      "description": "Code, APIs, tests, and developer tooling.",
+      "capabilities": [
+        {
+          "id": "python",
+          "name": "Python",
+          "description": "Write, review, and explain Python."
+        },
+        {
+          "id": "javascript",
+          "name": "JavaScript",
+          "description": "Write, review, and explain JavaScript."
+        },
+        {
+          "id": "typescript",
+          "name": "TypeScript",
+          "description": "Write, review, and explain TypeScript."
+        },
+        {
+          "id": "api-development",
+          "name": "API development",
+          "description": "Design and implement HTTP APIs."
+        },
+        {
+          "id": "database-development",
+          "name": "Database development",
+          "description": "Schema design and query work."
+        },
+        {
+          "id": "testing",
+          "name": "Testing",
+          "description": "Unit, integration, and regression tests."
+        },
+        {
+          "id": "devops",
+          "name": "DevOps",
+          "description": "CI, packaging, and deployment automation."
+        },
+        {
+          "id": "github",
+          "name": "GitHub",
+          "description": "Repository workflows, issues, and pull requests."
+        },
+        {
+          "id": "smart-contract-development",
+          "name": "Smart contract development",
+          "description": "Write public-network contract code. This registry never stores keys."
+        },
+        {
+          "id": "security-analysis",
+          "name": "Security analysis",
+          "description": "Review designs and code for defects. Not a formal audit certificate."
+        },
+        {
+          "id": "code-review",
+          "name": "Code review",
+          "description": "Review diffs for defects and style."
+        },
+        {
+          "id": "debugging",
+          "name": "Debugging",
+          "description": "Isolate failures from logs and reproductions."
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "name": "Data",
+      "description": "Analyze, clean, and present structured data.",
+      "capabilities": [
+        {
+          "id": "data-analysis",
+          "name": "Data analysis",
+          "description": "Describe patterns in supplied datasets."
+        },
+        {
+          "id": "statistics",
+          "name": "Statistics",
+          "description": "Descriptive and inferential stats on supplied data."
+        },
+        {
+          "id": "visualization",
+          "name": "Visualization",
+          "description": "Charts and summaries of supplied data."
+        },
+        {
+          "id": "data-cleaning",
+          "name": "Data cleaning",
+          "description": "Normalize and repair messy tables."
+        },
+        {
+          "id": "etl",
+          "name": "ETL",
+          "description": "Extract, transform, and load pipelines."
+        },
+        {
+          "id": "market-data-analysis",
+          "name": "Market data analysis",
+          "description": "Describe public market datasets. Not investment advice."
+        },
+        {
+          "id": "blockchain-data-analysis",
+          "name": "Blockchain data analysis",
+          "description": "Analyze public chain datasets."
+        }
+      ]
+    },
+    {
+      "id": "language",
+      "name": "Language",
+      "description": "Translation, writing, and localization.",
+      "capabilities": [
+        {
+          "id": "translation",
+          "name": "Translation",
+          "description": "Translate text between languages."
+        },
+        {
+          "id": "transcription",
+          "name": "Transcription",
+          "description": "Speech-to-text on supplied audio."
+        },
+        {
+          "id": "localization",
+          "name": "Localization",
+          "description": "Adapt copy for a locale."
+        },
+        {
+          "id": "multilingual-communication",
+          "name": "Multilingual communication",
+          "description": "Draft and mediate text across languages."
+        },
+        {
+          "id": "writing",
+          "name": "Writing",
+          "description": "Draft prose to a brief."
+        },
+        {
+          "id": "copy-editing",
+          "name": "Copy editing",
+          "description": "Edit for clarity, grammar, and consistency."
+        }
+      ]
+    },
+    {
+      "id": "agent-ops",
+      "name": "Agent operations",
+      "description": "How agents describe operational roles. This local registry implements discovery, delegation records, and signed messages. It is not a live decentralized network.",
+      "capabilities": [
+        {
+          "id": "agent-discovery",
+          "name": "Agent discovery",
+          "description": "Find agents by advertised capability."
+        },
+        {
+          "id": "agent-orchestration",
+          "name": "Agent orchestration",
+          "description": "Coordinate other agents for a multi-capability task (local records only)."
+        },
+        {
+          "id": "task-delegation",
+          "name": "Task delegation",
+          "description": "Split and assign work through the local task protocol."
+        },
+        {
+          "id": "agent-verification",
+          "name": "Agent verification",
+          "description": "Record independent checks and vouches. Never auto-verifies claims."
+        },
+        {
+          "id": "monitoring",
+          "name": "Monitoring",
+          "description": "Observe task and agent status as reported."
+        },
+        {
+          "id": "automation",
+          "name": "Automation",
+          "description": "Script repetitive agent-ops workflows."
+        },
+        {
+          "id": "swarm-coordination",
+          "name": "Swarm coordination",
+          "description": "Keep a named swarm coherent. Local grouping only."
+        },
+        {
+          "id": "capability-discovery",
+          "name": "Capability discovery",
+          "description": "Alias for finding agents by advertised capability."
+        },
+        {
+          "id": "heartbeat",
+          "name": "Heartbeat",
+          "description": "Client-reported liveness signals. This registry does not probe hosts."
+        }
+      ]
+    }
+  ]
+}

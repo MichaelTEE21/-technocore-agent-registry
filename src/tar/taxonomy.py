@@ -1,265 +1,37 @@
-"""Capability taxonomy stored in-process so new caps can be added without a protocol change."""
+"""Data-driven capability taxonomy. New ids do not change the wire protocol."""
 
 from __future__ import annotations
 
+import json
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
-# Categories follow the v0.1 proposal. Capability ids are stable strings;
-# adding a new id does not change the wire protocol.
-#
-# agent-orchestration and task-delegation are capability *ids* only.
-# This registry does not implement an orchestration or messaging protocol.
-
-TAXONOMY: dict[str, dict[str, Any]] = {
-    "crypto-web3": {
-        "id": "crypto-web3",
-        "name": "Crypto / Web3",
-        "description": "Public-chain research, taxonomy, and read-only on-chain inspection. Never holds private keys or seeds.",
-        "capabilities": [
-            {
-                "id": "crypto-research",
-                "name": "Crypto research",
-                "description": "Market, protocol, and ecosystem research from public sources.",
-            },
-            {
-                "id": "onchain-read",
-                "name": "On-chain read",
-                "description": "Read public chain state. No signing, no key custody.",
-            },
-            {
-                "id": "token-taxonomy",
-                "name": "Token taxonomy",
-                "description": "Classify tokens and protocols from public metadata.",
-            },
-            {
-                "id": "defi-research",
-                "name": "DeFi research",
-                "description": "Describe DeFi mechanisms from public documentation.",
-            },
-            {
-                "id": "wallet-analysis",
-                "name": "Wallet analysis",
-                "description": "Analyze public addresses only. Never request or store keys.",
-            },
-        ],
-    },
-    "research": {
-        "id": "research",
-        "name": "Research",
-        "description": "Open-web and literature research with source attribution.",
-        "capabilities": [
-            {
-                "id": "web-research",
-                "name": "Web research",
-                "description": "Gather and summarize publicly available information.",
-            },
-            {
-                "id": "source-verification",
-                "name": "Source verification",
-                "description": "Check claims against cited public sources.",
-            },
-            {
-                "id": "literature-review",
-                "name": "Literature review",
-                "description": "Survey papers and long-form public documents.",
-            },
-            {
-                "id": "fact-checking",
-                "name": "Fact checking",
-                "description": "Compare statements to cited evidence.",
-            },
-        ],
-    },
-    "documents": {
-        "id": "documents",
-        "name": "Documents",
-        "description": "Parse, extract, and summarize documents supplied by the caller.",
-        "capabilities": [
-            {
-                "id": "pdf-analysis",
-                "name": "PDF analysis",
-                "description": "Structure and inspect PDF content.",
-            },
-            {
-                "id": "document-extraction",
-                "name": "Document extraction",
-                "description": "Pull fields, tables, and entities from documents.",
-            },
-            {
-                "id": "summarization",
-                "name": "Summarization",
-                "description": "Produce shorter restatements of provided text.",
-            },
-            {
-                "id": "ocr",
-                "name": "OCR",
-                "description": "Optical character recognition on supplied images or scans.",
-            },
-        ],
-    },
-    "legal": {
-        "id": "legal",
-        "name": "Legal",
-        "description": "Legal *research assistance* only. Not legal advice. See the disclaimer in docs/capabilities.md.",
-        "disclaimer": (
-            "Capabilities in the legal category are research and drafting aids. "
-            "They are not a lawyer, they do not form an attorney-client relationship, "
-            "and their output is not legal advice. A qualified professional in the "
-            "relevant jurisdiction must review any matter that has legal consequences."
-        ),
-        "capabilities": [
-            {
-                "id": "legal-research",
-                "name": "Legal research",
-                "description": "Find publicly available statutes, cases, and commentary. Not legal advice.",
-            },
-            {
-                "id": "contract-review",
-                "name": "Contract review",
-                "description": "Highlight clauses in a supplied draft. Not a legal opinion.",
-            },
-            {
-                "id": "compliance-check",
-                "name": "Compliance check",
-                "description": "Map a description to publicly documented policy checklists. Not a determination.",
-            },
-        ],
-    },
-    "software": {
-        "id": "software",
-        "name": "Software",
-        "description": "Code, APIs, tests, and developer tooling.",
-        "capabilities": [
-            {
-                "id": "python",
-                "name": "Python",
-                "description": "Write, review, and explain Python.",
-            },
-            {
-                "id": "api-development",
-                "name": "API development",
-                "description": "Design and implement HTTP APIs.",
-            },
-            {
-                "id": "testing",
-                "name": "Testing",
-                "description": "Unit, integration, and regression tests.",
-            },
-            {
-                "id": "code-review",
-                "name": "Code review",
-                "description": "Review diffs for defects and style.",
-            },
-            {
-                "id": "debugging",
-                "name": "Debugging",
-                "description": "Isolate failures from logs and reproductions.",
-            },
-        ],
-    },
-    "data": {
-        "id": "data",
-        "name": "Data",
-        "description": "Analyze, clean, and present structured data.",
-        "capabilities": [
-            {
-                "id": "data-analysis",
-                "name": "Data analysis",
-                "description": "Describe patterns in supplied datasets.",
-            },
-            {
-                "id": "etl",
-                "name": "ETL",
-                "description": "Extract, transform, and load pipelines.",
-            },
-            {
-                "id": "visualization",
-                "name": "Visualization",
-                "description": "Charts and summaries of supplied data.",
-            },
-            {
-                "id": "data-cleaning",
-                "name": "Data cleaning",
-                "description": "Normalize and repair messy tables.",
-            },
-        ],
-    },
-    "language": {
-        "id": "language",
-        "name": "Language",
-        "description": "Translation, writing, and localization.",
-        "capabilities": [
-            {
-                "id": "translation",
-                "name": "Translation",
-                "description": "Translate text between languages.",
-            },
-            {
-                "id": "writing",
-                "name": "Writing",
-                "description": "Draft prose to a brief.",
-            },
-            {
-                "id": "copy-editing",
-                "name": "Copy editing",
-                "description": "Edit for clarity, grammar, and consistency.",
-            },
-            {
-                "id": "localization",
-                "name": "Localization",
-                "description": "Adapt copy for a locale.",
-            },
-        ],
-    },
-    "agent-ops": {
-        "id": "agent-ops",
-        "name": "Agent operations",
-        "description": (
-            "How agents describe operational roles in a swarm. "
-            "agent-orchestration and task-delegation are capability identifiers only; "
-            "this registry does not run a messaging or delegation protocol (FUTURE)."
-        ),
-        "capabilities": [
-            {
-                "id": "agent-orchestration",
-                "name": "Agent orchestration",
-                "description": "Claimed ability to coordinate other agents. Protocol is FUTURE — not implemented here.",
-            },
-            {
-                "id": "task-delegation",
-                "name": "Task delegation",
-                "description": "Claimed ability to split and assign work. Protocol is FUTURE — not implemented here.",
-            },
-            {
-                "id": "swarm-coordination",
-                "name": "Swarm coordination",
-                "description": "Claimed ability to keep a named swarm coherent. Not a runtime.",
-            },
-            {
-                "id": "capability-discovery",
-                "name": "Capability discovery",
-                "description": "Find agents by advertised capability — this registry's own job.",
-            },
-            {
-                "id": "heartbeat",
-                "name": "Heartbeat",
-                "description": "Client-reported liveness signals. This registry does not probe hosts.",
-            },
-        ],
-    },
-}
+_DATA_PATH = Path(__file__).resolve().parent / "data" / "taxonomy.json"
 
 LEVELS = ("beginner", "intermediate", "advanced", "expert")
 
 
-def all_categories() -> list[dict[str, Any]]:
-    return [deepcopy(c) for c in TAXONOMY.values()]
+def _load_file() -> dict[str, Any]:
+    return json.loads(_DATA_PATH.read_text(encoding="utf-8"))
 
 
-def get_category(category_id: str) -> dict[str, Any] | None:
-    cat = TAXONOMY.get(category_id)
-    return deepcopy(cat) if cat else None
+def _categories_map(raw: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
+    data = raw if raw is not None else _load_file()
+    out: dict[str, dict[str, Any]] = {}
+    for cat in data["categories"]:
+        out[cat["id"]] = cat
+    return out
+
+
+TAXONOMY: dict[str, dict[str, Any]] = _categories_map()
+
+
+def reload_taxonomy() -> None:
+    """Reload from disk after a safe add or an operator edit."""
+    global TAXONOMY, CAPABILITY_INDEX
+    TAXONOMY = _categories_map()
+    CAPABILITY_INDEX = _index()
 
 
 def _index() -> dict[str, dict[str, Any]]:
@@ -269,13 +41,22 @@ def _index() -> dict[str, dict[str, Any]]:
             item = dict(cap)
             item["category"] = cat["id"]
             item["category_name"] = cat["name"]
-            if "disclaimer" in cat:
+            if cat.get("disclaimer"):
                 item["disclaimer"] = cat["disclaimer"]
             out[cap["id"]] = item
     return out
 
 
 CAPABILITY_INDEX = _index()
+
+
+def all_categories() -> list[dict[str, Any]]:
+    return [deepcopy(c) for c in TAXONOMY.values()]
+
+
+def get_category(category_id: str) -> dict[str, Any] | None:
+    cat = TAXONOMY.get(category_id)
+    return deepcopy(cat) if cat else None
 
 
 def get_capability(capability_id: str) -> dict[str, Any] | None:
@@ -298,3 +79,47 @@ def known_capability_ids() -> set[str]:
 
 def known_category_ids() -> set[str]:
     return set(TAXONOMY)
+
+
+def add_capability(
+    category_id: str,
+    cap: dict[str, Any],
+    *,
+    persist: bool = False,
+) -> dict[str, Any]:
+    """Register a new capability id without a protocol bump. Idempotent.
+
+    Safe add: unknown category is rejected; duplicate ids in another category
+    are rejected; the same id in the same category is a no-op.
+    """
+    global CAPABILITY_INDEX
+    if category_id not in TAXONOMY:
+        raise ValueError(f"unknown category: {category_id}")
+    cid = cap.get("id")
+    if not cid or not isinstance(cid, str):
+        raise ValueError("capability id is required")
+    existing = CAPABILITY_INDEX.get(cid)
+    if existing and existing["category"] != category_id:
+        raise ValueError(f"capability {cid} already belongs to {existing['category']}")
+    if existing and existing["category"] == category_id:
+        return deepcopy(existing)
+    record = {
+        "id": cid,
+        "name": cap.get("name") or cid,
+        "description": cap.get("description") or "",
+    }
+    TAXONOMY[category_id]["capabilities"].append(record)
+    if persist:
+        raw = _load_file()
+        for cat in raw["categories"]:
+            if cat["id"] == category_id:
+                if not any(c["id"] == cid for c in cat["capabilities"]):
+                    cat["capabilities"].append(record)
+                break
+        _DATA_PATH.write_text(json.dumps(raw, indent=2) + "\n", encoding="utf-8")
+        reload_taxonomy()
+    else:
+        CAPABILITY_INDEX = _index()
+    item = get_capability(cid)
+    assert item is not None
+    return item

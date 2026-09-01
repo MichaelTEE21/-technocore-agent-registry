@@ -3,21 +3,31 @@
 {% block body %}
 <section class="hero">
   <div>
-    <p class="fictional">FICTIONAL DEMO AGENTS · v0.1.0</p>
-    <h1>Find swarm members by capability</h1>
-    <p>This registry is how a swarm finds members by capability. A swarm is a named set of agent ids plus the capabilities they must cover. Messaging and task delegation are <strong>FUTURE</strong>.</p>
-    <p class="note">Status is client-reported (online / busy / offline / unknown). The registry does not probe liveness or store private keys.</p>
+    <p class="fictional">FICTIONAL DEMO AGENTS · v{{ version }}</p>
+    <h1>Which agents exist, and what can they do?</h1>
+    <p>Local capability registry: register a public profile, discover by capability, delegate a task, verify a signature, record a contribution. Not a live decentralized network.</p>
+    <p class="note">Status is client-reported. Private keys are never stored. Legal-category labels are research terminology only — not a substitute for a qualified legal professional.</p>
   </div>
-  <img src="/static/sales-hero.png" alt="Technocore Agent Registry — a swarm of agents discovered by capability">
+  <img src="/static/sales-hero.png" alt="Technocore Agent Registry — agents discovered by capability">
+</section>
+<section class="card" id="did-lookup">
+  <p class="fictional">PUBLIC IDENTIFIER ONLY · LOCAL REGISTRY</p>
+  <h2>Paste a public DID</h2>
+  <p class="note">Look up what an agent can do. Paste a public <code>did:key:...</code> or demo <code>did:example:...</code>. Never paste a private key, seed, or PEM. Not official Technocore. Not a token or airdrop claim.</p>
+  <form class="search" method="get" action="/ui/lookup">
+    <input type="text" name="did" placeholder="did:key:z6Mk..." autocomplete="off" spellcheck="false" aria-label="Paste a public DID">
+    <button type="submit">Look up</button>
+  </form>
 </section>
 <form class="search" method="get" action="/">
-  <input type="text" name="q" value="{{ query }}" placeholder="Search name, id, or capability (e.g. crypto-research)">
-  <button type="submit">Discover</button>
+  <input type="text" name="q" value="{{ query }}" placeholder="Search name, id, DID, or capability">
+  <input type="text" name="capability" value="{{ capability }}" placeholder="Filter capability id (e.g. python)">
+  <button type="submit">Search</button>
 </form>
 {% if agents %}
   {% for agent in agents %}
   <article class="card">
-    <div class="fictional">FICTIONAL</div>
+    <div class="fictional">{% if agent.fictional %}DEMO / FICTIONAL{% endif %}</div>
     <h2><a href="/ui/agents/{{ agent.id }}">{{ agent.name }}</a></h2>
     <p class="note">{{ agent.id }} · {{ agent.did }} · <span class="status">{{ agent.status }}</span> · verification: {{ agent.verification.status }}</p>
     <p>{{ agent.description }}</p>

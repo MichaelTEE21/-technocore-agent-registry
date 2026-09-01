@@ -1,80 +1,62 @@
 #!/usr/bin/env python3
-"""Seed three FICTIONAL test agents and an example swarm. Never logs secrets."""
+"""Seed five FICTIONAL test agents and an example swarm.
+
+Ed25519 private keys are written only to gitignored data/keys/*.key files.
+They are never printed, logged, or stored in the registry database.
+"""
 
 from __future__ import annotations
 
 import json
+import os
+import stat
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from tar.crypto import generate_keypair, public_key_hex  # noqa: E402
 from tar.db import get_session_factory, init_db  # noqa: E402
-from tar.models import Agent, AgentCapability, Swarm, SwarmMember, VerificationRecord  # noqa: E402
+from tar.demo import AGENTS  # noqa: E402
+from tar.models import (  # noqa: E402
+    Agent,
+    AgentCapability,
+    Swarm,
+    SwarmMember,
+    VerificationRecord,
+)
 
-FICTIONAL = "FICTIONAL test agent for the Technocore Agent Registry demo. Not a real service."
+KEY_DIR = ROOT / "data" / "keys"
 
-AGENTS = [
-    {
-        "id": "test-research",
-        "name": "Research Agent",
-        "did": "did:example:test-research",
-        "version": "0.1.0",
-        "description": (
-            f"{FICTIONAL} Advertises crypto-research, web-research, and source-verification."
-        ),
-        "status": "online",
-        "endpoint": "https://example.invalid/agents/research",
-        "protocols": ["http"],
-        "capabilities": [
-            {"id": "crypto-research", "category": "crypto-web3", "level": "advanced"},
-            {"id": "web-research", "category": "research", "level": "advanced"},
-            {"id": "source-verification", "category": "research", "level": "intermediate"},
-        ],
-    },
-    {
-        "id": "test-document",
-        "name": "Document Agent",
-        "did": "did:example:test-document",
-        "version": "0.1.0",
-        "description": (
-            f"{FICTIONAL} Advertises pdf-analysis, document-extraction, and summarization."
-        ),
-        "status": "online",
-        "endpoint": "https://example.invalid/agents/document",
-        "protocols": ["http"],
-        "capabilities": [
-            {"id": "pdf-analysis", "category": "documents", "level": "advanced"},
-            {"id": "document-extraction", "category": "documents", "level": "advanced"},
-            {"id": "summarization", "category": "documents", "level": "intermediate"},
-        ],
-    },
-    {
-        "id": "test-developer",
-        "name": "Developer Agent",
-        "did": "did:example:test-developer",
-        "version": "0.1.0",
-        "description": f"{FICTIONAL} Advertises python, api-development, and testing.",
-        "status": "unknown",
-        "endpoint": "https://example.invalid/agents/developer",
-        "protocols": ["http"],
-        "capabilities": [
-            {"id": "python", "category": "software", "level": "advanced"},
-            {"id": "api-development", "category": "software", "level": "advanced"},
-            {"id": "testing", "category": "software", "level": "intermediate"},
-        ],
-    },
-]
+
+def _ensure_keys(agent_id: str) -> str:
+    KEY_DIR.mkdir(parents=True, exist_ok=True)
+    path = KEY_DIR / f"{agent_id}.key"
+    if path.exists():
+        raw = path.read_bytes()
+        if len(raw) == 64:
+            raw = bytes.fromhex(raw.decode().strip())
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey as EK
+
+        pub = EK.from_private_bytes(raw).public_key().public_bytes_raw()
+        return public_key_hex(pub)
+    priv, pub = generate_keypair()
+    path.write_bytes(priv)
+    os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+    return public_key_hex(pub)
 
 
 def seed() -> None:
     init_db()
     db = get_session_factory()()
     try:
+        ids = []
         for spec in AGENTS:
+            ids.append(spec["id"])
             if db.get(Agent, spec["id"]) is not None:
                 continue
+            pub = _ensure_keys(spec["id"])
             agent = Agent(
                 id=spec["id"],
                 name=spec["name"],
@@ -85,6 +67,7 @@ def seed() -> None:
                 status=spec["status"],
                 endpoint=spec["endpoint"],
                 verification_status="claimed",
+                public_key=pub,
                 fictional="true",
             )
             db.add(agent)
@@ -96,6 +79,7 @@ def seed() -> None:
                         capability_id=cap["id"],
                         category=cap["category"],
                         level=cap["level"],
+                        evidence_status="claimed",
                     )
                 )
             db.add(
@@ -112,20 +96,21 @@ def seed() -> None:
                     id="demo-core",
                     name="Demo Core Swarm",
                     description=(
-                        "Example swarm of the three FICTIONAL test agents. "
-                        "Grouped by complementary capabilities. Not a live network."
+                        "Example swarm of FICTIONAL test agents grouped by complementary "
+                        "capabilities. Local only. Not a live network."
                     ),
                     required_capabilities_json=json.dumps(
-                        ["crypto-research", "pdf-analysis", "python"]
+                        ["crypto-research", "pdf-analysis", "python", "legal-research", "security-analysis"]
                     ),
                 )
             )
             db.flush()
-            for agent_id in ("test-research", "test-document", "test-developer"):
-                db.add(SwarmMember(swarm_id="demo-core", agent_id=agent_id))
+            for agent_id in ids:
+                db.add(SwarmMember(swarm_id="demo-core", agent_id=agent_id, role="recommended"))
         db.commit()
-        print("Seeded fictional agents: test-research, test-document, test-developer")
+        print("Seeded fictional demo agents:", ", ".join(ids))
         print("Seeded example swarm: demo-core")
+        print("Private keys (if generated) live in data/keys/ — gitignored, never printed.")
     finally:
         db.close()
 

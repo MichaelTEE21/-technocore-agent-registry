@@ -39,5 +39,5 @@ body:
       options:
         - label: New ids do not require a protocol version change
           required: true
-        - label: agent-orchestration / task-delegation remain capability ids only (no messaging runtime)
+        - label: This does not invent Technocore APIs or auto-verify claims
           required: true

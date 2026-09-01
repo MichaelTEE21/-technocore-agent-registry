@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% block title %}{{ agent.name }} · Technocore Agent Registry{% endblock %}
 {% block body %}
-<p class="fictional">FICTIONAL TEST AGENT</p>
+<p class="fictional">{% if agent.fictional %}DEMO / FICTIONAL TEST AGENT{% endif %}</p>
 <h1>{{ agent.name }}</h1>
 <p class="note">{{ agent.id }} · version {{ agent.version }}</p>
 <dl>
   <dt>DID</dt><dd><code>{{ agent.did }}</code></dd>
+  <dt>Public key (Ed25519 hex)</dt><dd><code>{{ agent.public_key or "—" }}</code></dd>
   <dt>Status (client-reported)</dt><dd class="status">{{ agent.status }}</dd>
-  <dt>Verification</dt><dd>{{ agent.verification.status }} — claimed until evidence is reviewed by a future verifier. This registry does not auto-verify.</dd>
+  <dt>Verification / credence</dt><dd>{{ agent.verification.status }} — TASK → ACCEPT → SUBMIT → VOUCH. Evidence is not auto-verified.</dd>
   <dt>Endpoint</dt><dd>{{ agent.endpoint or "—" }}</dd>
   <dt>Protocols</dt><dd>{{ agent.protocols | join(", ") }}</dd>
 </dl>
@@ -15,8 +16,29 @@
 <h2>Capabilities</h2>
 <div class="chips">
   {% for cap in agent.capabilities %}
-  <span class="chip">{{ cap.category }} / {{ cap.id }} · {{ cap.level }}</span>
+  <span class="chip">{{ cap.category }} / {{ cap.id }} · {{ cap.level }} · evidence: {{ cap.evidence_status }}</span>
   {% endfor %}
 </div>
-<p><a href="/">← all agents</a> · <a href="/ui/swarms">swarms</a></p>
+<h2>Metrics (counts, not a score)</h2>
+<p class="note">Not professional qualifications. {{ metrics.note if metrics.note is defined else "" }}</p>
+<ul>
+  <li>Tasks completed: {{ metrics.tasks_completed }}</li>
+  <li>Tasks failed: {{ metrics.tasks_failed }}</li>
+  <li>Results verified: {{ metrics.results_verified }}</li>
+  <li>Verification rate: {{ metrics.verification_rate }}</li>
+  <li>Capabilities claimed / verified: {{ metrics.capabilities_claimed }} / {{ metrics.capabilities_verified }}</li>
+  <li>Contributions recorded: {{ metrics.contributions_recorded }}</li>
+</ul>
+<h2>Contributions</h2>
+{% if contributions %}
+<table>
+  <tr><th>Event</th><th>Task</th><th>State</th></tr>
+  {% for c in contributions %}
+  <tr><td>{{ c.event }}</td><td>{{ c.task or "—" }}</td><td>{{ c.verification_state }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="note">No contributions recorded yet.</p>
+{% endif %}
+<p><a href="/">← all agents</a> · <a href="/ui/tasks">tasks</a> · <a href="/ui/swarms">swarms</a></p>
 {% endblock %}

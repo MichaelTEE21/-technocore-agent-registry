@@ -1,26 +1,18 @@
 # Roadmap
 
-## v0.1 (this tree)
+## v1.0.0 (this tree)
 
-- Profile CRUD, taxonomy, HTML demo, CLI
-- Named swarms + assemble-by-capability
-- Claim/evidence verification records
-- Reputation **events** without a score
-- A2A **types** without a network
+Local register → discover → delegate → sign → vouch → contribute → swarm.
 
-## Next (still discovery)
+## Next
 
-- Signed profile documents (public key in DID, signature over canonical JSON)
-- Optional token still, plus per-agent bearer for self-update
-- Postgres alembic migrations
-- Pagination and ETags
-- Community-verified workflow (human/agent reviewers, still no silent auto-verify)
+- Optional Technocore DID adapter implementation (still no invented APIs)
+- Alembic migrations for Postgres
+- ETags / conditional GET
+- Reviewer UX for independently-checked → vouch
 
-## Later (labeled FUTURE in the code)
+## Later
 
-- Reputation score derived from events (documented weights, not a black box)
-- A2A messaging plane: REQUEST / ACCEPT / REJECT / PROGRESS / RESULT / VERIFY
-- Task delegation / orchestration **runtime** (taxonomy ids already exist)
+- Documented reputation *ideas* derived from contribution events (weights published, not a black box, still not a professional credential)
 - Federation between registries
-
-Nothing in FUTURE should be mistaken for a hidden v0.1 feature.
+- Remote A2A transport (this repo stays a log until then)

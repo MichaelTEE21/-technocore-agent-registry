@@ -4,24 +4,26 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from tar.config import settings
-from tar.models import Base
+from tar.models import Base, Capability
+from tar.taxonomy import list_capabilities
 
 _engine: Engine | None = None
 _SessionLocal: sessionmaker[Session] | None = None
 
 
 def make_engine(database_url: str | None = None) -> Engine:
+    from sqlalchemy import create_engine
+
     url = database_url or settings.database_url
     kwargs: dict = {"pool_pre_ping": True, "future": True}
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
     else:
-        # Postgres-ready: queue_pool + pre_ping. Caller supplies postgresql+psycopg://...
         kwargs["pool_size"] = 5
         kwargs["max_overflow"] = 10
     return create_engine(url, **kwargs)
@@ -46,9 +48,59 @@ def get_session_factory() -> sessionmaker[Session]:
     return _SessionLocal
 
 
+def _add_missing_columns(engine: Engine) -> None:
+    """Lightweight migrate: ADD COLUMN for new fields on existing SQLite files."""
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    wanted = {
+        "agents": [("public_key", "VARCHAR(128)")],
+        "agent_capabilities": [("evidence_status", "VARCHAR(32) DEFAULT 'claimed'")],
+        "verification_records": [
+            ("capability_id", "VARCHAR(128)"),
+            ("checker_id", "VARCHAR(128)"),
+        ],
+        "swarm_members": [("role", "VARCHAR(32) DEFAULT 'recommended'")],
+    }
+    with engine.begin() as conn:
+        for table, cols in wanted.items():
+            if table not in tables:
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table)}
+            for name, decl in cols:
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {decl}"))
+
+
+def sync_taxonomy(session: Session) -> None:
+    for cap in list_capabilities():
+        row = session.get(Capability, cap["id"])
+        if row is None:
+            session.add(
+                Capability(
+                    id=cap["id"],
+                    name=cap["name"],
+                    category=cap["category"],
+                    description=cap.get("description") or "",
+                    disclaimer=cap.get("disclaimer"),
+                )
+            )
+        else:
+            row.name = cap["name"]
+            row.category = cap["category"]
+            row.description = cap.get("description") or ""
+            row.disclaimer = cap.get("disclaimer")
+    session.commit()
+
+
 def init_db(engine: Engine | None = None) -> None:
     eng = engine or get_engine()
     Base.metadata.create_all(bind=eng)
+    _add_missing_columns(eng)
+    db = make_session_factory(eng)()
+    try:
+        sync_taxonomy(db)
+    finally:
+        db.close()
 
 
 def reset_engine(database_url: str) -> Engine:

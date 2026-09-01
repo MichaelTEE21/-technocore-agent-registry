@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ task.task_id }} · Task{% endblock %}
+{% block body %}
+<h1>Task {{ task.task_id }}</h1>
+<dl>
+  <dt>Status</dt><dd>{{ task.status }}</dd>
+  <dt>Requester</dt><dd>{{ task.requester }}</dd>
+  <dt>Assignee</dt><dd>{{ task.assignee or "—" }}</dd>
+  <dt>Capability</dt><dd>{{ task.requested_capability }}</dd>
+  <dt>Protocol</dt><dd>{{ task.protocol }}</dd>
+  <dt>Description</dt><dd>{{ task.description }}</dd>
+</dl>
+{% if task.result %}
+<h2>Result</h2>
+<pre>{{ task.result }}</pre>
+{% endif %}
+<p><a href="/ui/tasks">← tasks</a></p>
+{% endblock %}

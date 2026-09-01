@@ -15,3 +15,6 @@ identity.pem
 *.key
 *.sqlite
 .DS_Store
+
+data/keys/*.key
+*.ed25519

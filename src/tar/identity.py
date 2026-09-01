@@ -22,6 +22,19 @@ _FORBIDDEN_FRAGMENTS = (
 )
 
 
+def looks_like_key_material(value: str) -> bool:
+    """True when a paste looks like a private key, seed, PEM, or similar secret."""
+    if not isinstance(value, str):
+        return False
+    lower = value.lower()
+    return any(frag in lower for frag in _FORBIDDEN_FRAGMENTS)
+
+
+def _reject_key_material(value: str) -> None:
+    if looks_like_key_material(value):
+        raise IdentityError("DID must be a public identifier; key material is rejected")
+
+
 class IdentityError(ValueError):
     """Raised when a DID is not a public identifier this provider accepts."""
 
@@ -90,9 +103,13 @@ class CompositeIdentityProvider(IdentityProvider):
         ]
 
     def validate_public_did(self, did: str) -> str:
-        if not isinstance(did, str) or ":" not in did:
+        if not isinstance(did, str):
+            raise IdentityError("DID must be a string")
+        value = did.strip()
+        _reject_key_material(value)
+        if not value or ":" not in value:
             raise IdentityError("DID must be a did:<method>:<id> public identifier")
-        parts = did.strip().split(":")
+        parts = value.split(":")
         if len(parts) < 3 or parts[0] != "did":
             raise IdentityError("DID must be a did:<method>:<id> public identifier")
         method = parts[1]
@@ -100,7 +117,7 @@ class CompositeIdentityProvider(IdentityProvider):
         for provider in self.providers:
             if provider.method in {method, "composite"}:
                 try:
-                    return provider.validate_public_did(did)
+                    return provider.validate_public_did(value)
                 except IdentityError as exc:
                     last_error = exc
         if last_error:
