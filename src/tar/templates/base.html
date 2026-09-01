@@ -21,8 +21,8 @@
     <nav class="sidebar-nav" id="site-nav" data-nav aria-label="Primary">
       <p class="nav-label">Platform</p>
       <a href="/" class="{% if request.url.path == '/' %}is-on{% endif %}">Overview</a>
-      <a href="/ui/projects" class="{% if request.url.path.startswith('/ui/projects') or request.url.path.startswith('/ui/agents') %}is-on{% endif %}">Projects</a>
-      <a href="/ui/agents">Agents</a>
+      <a href="/ui/projects" class="{% if request.url.path.startswith('/ui/projects') %}is-on{% endif %}">Projects</a>
+      <a href="/ui/agents" class="{% if request.url.path.startswith('/ui/agents') %}is-on{% endif %}">Agents</a>
       <a href="/ui/deployments" class="{% if request.url.path.startswith('/ui/deployments') %}is-on{% endif %}">Deployments</a>
       <a href="/ui/discover" class="{% if request.url.path.startswith('/ui/discover') %}is-on{% endif %}">Discover</a>
       <p class="nav-label">Registry</p>

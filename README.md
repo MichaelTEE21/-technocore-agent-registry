@@ -84,6 +84,14 @@ python scripts/seed_demo.py
 PYTHONPATH=src python -m uvicorn tar.main:app --host 127.0.0.1 --port 8080
 ```
 
+### Render (or any `$PORT` host)
+
+Bind all interfaces and use the platform port:
+
+```bash
+PYTHONPATH=src uvicorn tar.main:app --host 0.0.0.0 --port $PORT
+```
+
 ### Windows PowerShell
 
 ```powershell

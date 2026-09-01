@@ -675,7 +675,10 @@ main.page { max-width: 1180px; width: 100%; }
     box-shadow: var(--shadow);
   }
   .sidebar.is-open { transform: translateX(0); }
-  .nav-toggle { display: inline-flex; }
+  .nav-toggle { display: inline-flex; margin-left: 0; }
+  .topbar { padding-left: 1rem; padding-right: 1rem; }
+  .topbar-actions .btn { padding: 0.45rem 0.75rem; font-size: 0.82rem; }
   .panel-row, .hero.command { grid-template-columns: 1fr; }
+  .wizard-steps { gap: 0.25rem; }
   .site-nav { display: none; } /* legacy */
 }
