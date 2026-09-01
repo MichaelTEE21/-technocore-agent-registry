@@ -106,11 +106,15 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 Then open:
 
-- Demo UI: http://127.0.0.1:8080/
+- Agent Network UI: http://127.0.0.1:8080/
+- Connect (DID paste): http://127.0.0.1:8080/ui/lookup
+- Agents: http://127.0.0.1:8080/ui/agents
 - Capabilities: http://127.0.0.1:8080/ui/capabilities
 - Discover: http://127.0.0.1:8080/ui/discover
 - Tasks: http://127.0.0.1:8080/ui/tasks
-- Contributions: http://127.0.0.1:8080/ui/contributions
+- Contributions / proof: http://127.0.0.1:8080/ui/contributions
+- Protocol: http://127.0.0.1:8080/ui/protocol
+- Developers: http://127.0.0.1:8080/ui/developers
 - Swarms: http://127.0.0.1:8080/ui/swarms
 - OpenAPI: http://127.0.0.1:8080/docs
 - Health: http://127.0.0.1:8080/healthz

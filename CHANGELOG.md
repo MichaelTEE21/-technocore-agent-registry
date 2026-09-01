@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Public Agent Network UI (v2): landing, directory, DID connect, capability explorer, protocol, developers, contribution proof views. HTML/CSS only; v1 API and tar.a2a unchanged.
+
 - Protocol contract `tar.a2a` **1.0**: JSON Schemas in `docs/protocol/`, language-agnostic `docs/protocol.md`.
 - Task timeline on `/ui/tasks/{id}` with ordered events and signature `VALID` / `INVALID` / `UNSIGNED`.
 - Lightweight Python client `tar_client.TarClient` (discover, task actions, `verify_message` via `tar.crypto`).

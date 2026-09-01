@@ -1,22 +1,22 @@
 {% extends "base.html" %}
+{% from "macros.html" import empty %}
 {% block title %}Tasks · Technocore Agent Registry{% endblock %}
 {% block body %}
-<h1>Tasks</h1>
+<p class="kicker">TASKS</p>
+<h1>Delegated work</h1>
 <p class="note">States: requested → accepted → in_progress → completed → verified. Strict transitions. Local records only.</p>
 {% if tasks %}
-<table>
-  <tr><th>ID</th><th>Capability</th><th>Requester</th><th>Assignee</th><th>Status</th></tr>
+<div class="stack tight">
   {% for t in tasks %}
-  <tr>
-    <td><a href="/ui/tasks/{{ t.task_id }}">{{ t.task_id }}</a></td>
-    <td>{{ t.requested_capability }}</td>
-    <td>{{ t.requester }}</td>
-    <td>{{ t.assignee or "—" }}</td>
-    <td>{{ t.status }}</td>
-  </tr>
+  <article class="card">
+    <p class="flag">{{ t.status }}</p>
+    <h2 style="margin:0.2rem 0;font-size:1.15rem;"><a href="/ui/tasks/{{ t.task_id }}">{{ t.task_id }}</a></h2>
+    <p class="meta">{{ t.requested_capability }} · {{ t.requester }} → {{ t.assignee or "unassigned" }}</p>
+    <p class="note">{{ t.description or "" }}</p>
+  </article>
   {% endfor %}
-</table>
+</div>
 {% else %}
-<p class="note">No tasks yet. Use the CLI or <code>POST /tasks</code>.</p>
+  {{ empty("No tasks yet.", "Use the CLI or POST /tasks. Quiet registries stay empty on purpose.") }}
 {% endif %}
 {% endblock %}

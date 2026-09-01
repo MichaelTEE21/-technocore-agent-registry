@@ -1,28 +1,33 @@
 {% extends "base.html" %}
+{% from "macros.html" import proves %}
 {% block title %}{{ task.task_id }} · Task{% endblock %}
 {% block body %}
-<style>
-  .timeline { list-style: none; padding: 0; margin: 1rem 0 1.2rem 0.35rem; border-left: 2px solid var(--line); }
-  .timeline li { padding: 0.65rem 0 0.65rem 1.1rem; position: relative; }
-  .timeline li::before {
-    content: ""; position: absolute; left: -5px; top: 1.05rem;
-    width: 8px; height: 8px; border-radius: 50%; background: var(--teal);
-  }
-  .sig-VALID { color: var(--teal); font-weight: 700; letter-spacing: .04em; }
-  .sig-INVALID { color: var(--danger); font-weight: 700; letter-spacing: .04em; }
-  .sig-UNSIGNED { color: var(--muted); font-weight: 700; letter-spacing: .04em; }
-</style>
+<p class="kicker">TASK</p>
 <h1>Task {{ task.task_id }}</h1>
-<dl>
+<p class="id-row">
+  <code>{{ task.task_id }}</code>
+  <button type="button" class="copy" data-copy="{{ task.task_id }}" data-label="Copy task ID" aria-label="Copy task ID">Copy task ID</button>
+</p>
+<dl class="facts">
   <dt>Status</dt><dd>{{ task.status }}</dd>
-  <dt>Requester</dt><dd>{{ task.requester }}</dd>
-  <dt>Assignee</dt><dd>{{ task.assignee or "—" }}</dd>
-  <dt>Capability</dt><dd>{{ task.requested_capability }}</dd>
+  <dt>Requester</dt><dd><a href="/ui/agents/{{ task.requester }}">{{ task.requester }}</a></dd>
+  <dt>Assignee</dt><dd>{% if task.assignee %}<a href="/ui/agents/{{ task.assignee }}">{{ task.assignee }}</a>{% else %}—{% endif %}</dd>
+  <dt>Capability</dt><dd><a href="/ui/capabilities/{{ task.requested_capability }}">{{ task.requested_capability }}</a></dd>
   <dt>Protocol</dt><dd>{{ task.protocol }}</dd>
   <dt>Description</dt><dd>{{ task.description }}</dd>
 </dl>
+
+<div class="stages" aria-label="Task flow">
+  <span>REQUEST</span><span class="sep">→</span>
+  <span>ACCEPT</span><span class="sep">→</span>
+  <span>PROGRESS</span><span class="sep">→</span>
+  <span>RESULT</span><span class="sep">→</span>
+  <span>VERIFICATION</span><span class="sep">→</span>
+  <span>CONTRIBUTION/VOUCH</span>
+</div>
+
 <h2>Timeline</h2>
-<p class="note">Ordered envelopes: requester → target REQUEST, then accept, progress, result, verify. Signature VALID means the envelope matches the sender public key. Identity check ≠ signature valid ≠ agent verification status ≠ task complete ≠ result is true.</p>
+<p class="note">A valid signature proves control of identity, not that content is true. Ordered envelopes from this local log.</p>
 {% if timeline %}
 <ol class="timeline">
   {% for event in timeline %}
@@ -30,16 +35,33 @@
     <div><strong>{{ event.type }}</strong> · {{ event.from }} → {{ event.to }}</div>
     <div class="note">{{ event.timestamp }} · <code>{{ event.message_id }}</code></div>
     <div>signature: <span class="sig-{{ event.signature_status }}">{{ event.signature_status }}</span></div>
+    {% if event.payload %}
+    <pre class="payload">{{ event.payload }}</pre>
+    {% endif %}
   </li>
   {% endfor %}
 </ol>
 {% else %}
 <p class="note">No messages recorded for this task yet.</p>
 {% endif %}
+
+{% if contributions %}
+<h2>Contributions</h2>
+<div class="stack tight">
+  {% for c in contributions %}
+  <article class="card">
+    <p class="flag">{{ c.event }} · {{ c.verification_state }}</p>
+    <p class="meta"><a href="/ui/agents/{{ c.agent }}">{{ c.agent }}</a> · <a href="/ui/contributions/{{ c.id }}">record {{ c.id }}</a></p>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% if task.result %}
 <h2>Result</h2>
 <pre>{{ task.result }}</pre>
 <p class="note">A completed result is not a proof that the answer is correct.</p>
 {% endif %}
-<p><a href="/ui/tasks">← tasks</a></p>
+{{ proves("task") }}
+<p class="note"><a href="/ui/tasks">← tasks</a></p>
 {% endblock %}
