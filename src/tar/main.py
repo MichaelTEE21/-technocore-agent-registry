@@ -400,7 +400,7 @@ def create_app() -> FastAPI:
                 endpoint=endpoint,
                 public_key=public_key,
                 status=status_v,  # type: ignore[arg-type]
-                fictional=fictional if fictional else True,
+                fictional=fictional,
                 capabilities=[CapabilityClaim(**c) for c in claims],
                 protocols=["http"],
             )

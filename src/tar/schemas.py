@@ -120,8 +120,18 @@ class AgentCreate(IgnoreExtras):
     status: AgentStatus = "unknown"
     endpoint: str | None = Field(default=None, max_length=1024)
     verification: VerificationBlock = Field(default_factory=VerificationBlock)
-    public_key: str | None = Field(default=None, max_length=128)
-    fictional: bool = True
+    public_key: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Ed25519 public key as lowercase hex (32 bytes). Derived from did:key when possible.",
+    )
+    fictional: bool = Field(
+        default=False,
+        description=(
+            "True for demo/fictional agents. Defaults false for real registrations; "
+            "did:example: DIDs are always treated as fictional."
+        ),
+    )
 
     @field_validator("did")
     @classmethod
@@ -158,6 +168,9 @@ class AgentCreate(IgnoreExtras):
 
     @model_validator(mode="after")
     def caps_match_category(self) -> AgentCreate:
+        from tar.crypto import SignatureError as SigErr
+        from tar.crypto import resolve_registration_public_key
+        from tar.identity import is_demo_did
         from tar.taxonomy import CAPABILITY_INDEX
 
         for cap in self.capabilities:
@@ -169,18 +182,50 @@ class AgentCreate(IgnoreExtras):
             cap.evidence_status = "claimed"
         if self.verification.status in {"verified", "vouched", "independently-checked"}:
             self.verification.status = "claimed"
+        # Prefer derive from did:key; reject mismatched supplied public_key.
+        try:
+            self.public_key = resolve_registration_public_key(self.did, self.public_key)
+        except SigErr as exc:
+            raise ValueError(str(exc)) from exc
+        # Demo DIDs are always fictional; non-demo default remains false unless flagged.
+        if is_demo_did(self.did):
+            self.fictional = True
         return self
 
 
 class AgentUpdate(IgnoreExtras):
-    name: str | None = Field(default=None, max_length=256)
+    """Whitelist of public metadata fields. No credentials or arbitrary injection."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=256)
+    did: str | None = Field(default=None, min_length=8, max_length=512)
     version: str | None = Field(default=None, max_length=64)
     description: str | None = Field(default=None, max_length=4000)
     capabilities: list[CapabilityClaim] | None = None
-    protocols: list[str] | None = None
+    protocols: list[str] | None = Field(default=None, max_length=16)
     status: AgentStatus | None = None
     endpoint: str | None = Field(default=None, max_length=1024)
     public_key: str | None = Field(default=None, max_length=128)
+    fictional: bool | None = None
+
+    @field_validator("did")
+    @classmethod
+    def public_did_only(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        try:
+            return default_identity_provider.validate_public_did(value)
+        except IdentityError as exc:
+            raise ValueError(str(exc)) from exc
+
+    @field_validator("endpoint")
+    @classmethod
+    def endpoint_shape(cls, value: str | None) -> str | None:
+        # Empty string clears the endpoint. Do not fetch/call the URL.
+        if value is None or value == "":
+            return None
+        if not (value.startswith("http://") or value.startswith("https://")):
+            raise ValueError("endpoint must be an http(s) URL")
+        return value
 
     @field_validator("public_key")
     @classmethod
@@ -191,6 +236,16 @@ class AgentUpdate(IgnoreExtras):
             return parse_public_key_hex(value).hex()
         except SignatureError as exc:
             raise ValueError(str(exc)) from exc
+
+    @field_validator("protocols")
+    @classmethod
+    def protocols_shape(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        cleaned = [str(p).strip() for p in value if str(p).strip()]
+        if len(cleaned) > 16:
+            raise ValueError("at most 16 protocols")
+        return cleaned
 
     @model_validator(mode="before")
     @classmethod
@@ -211,7 +266,7 @@ class AgentOut(IgnoreExtras):
     endpoint: str | None
     verification: VerificationBlock
     public_key: str | None = None
-    fictional: bool = True
+    fictional: bool = False
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -262,7 +317,8 @@ class VerificationList(IgnoreExtras):
     current_status: VerificationStatus
     note: str = (
         "Credence is TASK → ACCEPT → SUBMIT → VOUCH. "
-        "claimed vs independently-checked vs vouched are distinct. "
+        "CLAIMED ≠ VERIFIED ≠ VOUCHED: claims are self-asserted; "
+        "independently-checked means a third party re-ran; vouched requires that prior check. "
         "This registry records claims and evidence; it does not auto-verify capability claims."
     )
     items: list[VerificationOut]

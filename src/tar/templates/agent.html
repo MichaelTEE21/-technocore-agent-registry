@@ -27,10 +27,13 @@
   <dl class="facts">
     <dt>DID</dt>
     <dd class="id-row"><code>{{ agent.did }}</code> <button type="button" class="copy" data-copy="{{ agent.did }}" data-label="Copy DID">Copy DID</button></dd>
-    <dt>Public key (Ed25519 hex)</dt><dd><code>{{ agent.public_key or "—" }}</code></dd>
+    <dt>DID verification</dt>
+    <dd>{% if agent.did.startswith('did:key:') %}Format-valid public did:key{% if agent.public_key %}; Ed25519 public key derived/stored{% endif %} (format check ≠ proof of control){% elif agent.did.startswith('did:example:') %}Demo did:example identifier — fictional / not a network identity{% else %}Public DID recorded{% endif %}</dd>
+    <dt>Public key (Ed25519 hex)</dt><dd><code>{{ agent.public_key or "—" }}</code>{% if agent.public_key %} <span class="note">32-byte raw key, lowercase hex — public only</span>{% endif %}</dd>
+    <dt>Profile type</dt><dd>{% if agent.fictional %}<span class="flag">DEMO / FICTIONAL</span> — not a live network operator{% else %}<span class="status-pill online">Non-demo registration</span> — still a local registry record; not official Technocore membership{% endif %}</dd>
     <dt>Status (client-reported)</dt><dd class="status">{{ agent.status }}</dd>
-    <dt>Verification / credence</dt><dd>{{ agent.verification.status }} — TASK → ACCEPT → SUBMIT → VOUCH. Evidence is not auto-verified.</dd>
-    <dt>Endpoint</dt><dd>{{ agent.endpoint or "—" }}</dd>
+    <dt>Verification / credence</dt><dd><strong>{{ agent.verification.status | upper }}</strong> — CLAIMED ≠ VERIFIED ≠ VOUCHED. Flow: TASK → ACCEPT → SUBMIT → VOUCH. Evidence is not auto-verified.</dd>
+    <dt>Endpoint</dt><dd>{% if agent.endpoint %}<code>{{ agent.endpoint }}</code> <span class="note">(recorded URL only — registry does not call it)</span>{% else %}—{% endif %}</dd>
     <dt>Protocols</dt><dd>{{ agent.protocols | join(", ") }}</dd>
     <dt>Registered</dt><dd>{{ agent.created_at }}</dd>
   </dl>
@@ -107,7 +110,9 @@
 <p class="note">Read-only project settings. Update via API <code>PUT /agents/{{ agent.id }}</code>. This UI does not store secrets.</p>
 <dl class="facts">
   <dt>Agent id</dt><dd><code>{{ agent.id }}</code></dd>
-  <dt>Fictional</dt><dd>{{ agent.fictional }}</dd>
+  <dt>Fictional / demo</dt><dd>{% if agent.fictional %}true (DEMO / FICTIONAL){% else %}false (non-demo){% endif %}</dd>
+  <dt>Public key</dt><dd><code>{{ agent.public_key or "—" }}</code></dd>
+  <dt>Endpoint</dt><dd>{{ agent.endpoint or "—" }}</dd>
   <dt>Version</dt><dd>{{ agent.version }}</dd>
 </dl>
 {% endif %}

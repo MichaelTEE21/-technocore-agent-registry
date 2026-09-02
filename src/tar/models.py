@@ -34,7 +34,7 @@ class Agent(Base):
     endpoint: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     verification_status: Mapped[str] = mapped_column(String(32), default="claimed")
     public_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    fictional: Mapped[str] = mapped_column(String(8), default="true")
+    fictional: Mapped[str] = mapped_column(String(8), default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

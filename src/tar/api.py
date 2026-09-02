@@ -11,8 +11,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from tar.crypto import SignatureError, resolve_registration_public_key
 from tar.db import get_db
-from tar.identity import IdentityError, default_identity_provider
+from tar.identity import IdentityError, default_identity_provider, is_demo_did
 from tar.models import (
     Agent,
     AgentCapability,
@@ -241,6 +242,12 @@ def register_agent(payload: AgentCreate, db: Db, _: Auth) -> AgentOut:
     existing_did = db.scalar(select(Agent).where(Agent.did == payload.did))
     if existing_did is not None:
         raise _http_error(409, "conflict", "DID already registered")
+    # public_key already derived/checked in AgentCreate; re-resolve for safety.
+    try:
+        public_key = resolve_registration_public_key(payload.did, payload.public_key)
+    except SignatureError as exc:
+        raise _http_error(400, "bad_request", str(exc)) from exc
+    fictional = True if (payload.fictional or is_demo_did(payload.did)) else False
     agent = Agent(
         id=payload.id,
         name=payload.name,
@@ -251,8 +258,8 @@ def register_agent(payload: AgentCreate, db: Db, _: Auth) -> AgentOut:
         status=payload.status,
         endpoint=payload.endpoint,
         verification_status="claimed",
-        public_key=payload.public_key,
-        fictional="true" if payload.fictional else "false",
+        public_key=public_key,
+        fictional="true" if fictional else "false",
     )
     db.add(agent)
     db.flush()
@@ -321,23 +328,57 @@ def agent_proof(agent_id: str, db: Db) -> JSONResponse:
 
 @router.put("/agents/{agent_id}", response_model=AgentOut, tags=["agents"])
 def update_agent(agent_id: str, payload: AgentUpdate, db: Db, _: Auth) -> AgentOut:
+    """Safely update whitelisted public metadata only. Never accepts credentials."""
     agent = _get_agent(db, agent_id)
-    if payload.name is not None:
-        agent.name = payload.name
-    if payload.version is not None:
-        agent.version = payload.version
-    if payload.description is not None:
-        agent.description = payload.description
-    if payload.protocols is not None:
-        agent.protocols_json = json.dumps(payload.protocols)
-    if payload.status is not None:
-        agent.status = payload.status
-    if payload.endpoint is not None:
-        agent.endpoint = payload.endpoint
-    if payload.public_key is not None:
-        agent.public_key = payload.public_key
-    if payload.capabilities is not None:
-        _replace_capabilities(db, agent, payload.capabilities)
+    data = payload.model_dump(exclude_unset=True)
+
+    if "did" in data and data["did"] is not None:
+        new_did = data["did"]
+        if new_did != agent.did:
+            clash = db.scalar(select(Agent).where(Agent.did == new_did, Agent.id != agent_id))
+            if clash is not None:
+                raise _http_error(409, "conflict", "DID already registered")
+            agent.did = new_did
+            # Recompute public_key from the new DID when it is did:key.
+            try:
+                agent.public_key = resolve_registration_public_key(new_did, data.get("public_key"))
+            except SignatureError as exc:
+                raise _http_error(400, "bad_request", str(exc)) from exc
+            if is_demo_did(new_did):
+                agent.fictional = "true"
+            # public_key handled above when DID changes
+            data.pop("public_key", None)
+
+    if "name" in data and data["name"] is not None:
+        agent.name = data["name"]
+    if "version" in data and data["version"] is not None:
+        agent.version = data["version"]
+    if "description" in data:
+        agent.description = data["description"] if data["description"] is not None else ""
+    if "protocols" in data and data["protocols"] is not None:
+        agent.protocols_json = json.dumps(data["protocols"])
+    if "status" in data and data["status"] is not None:
+        agent.status = data["status"]
+    if "endpoint" in data:
+        # Validated http(s) or None (cleared). Never fetched.
+        agent.endpoint = data["endpoint"]
+    if "public_key" in data:
+        supplied = data["public_key"]
+        try:
+            agent.public_key = resolve_registration_public_key(agent.did, supplied)
+        except SignatureError as exc:
+            raise _http_error(400, "bad_request", str(exc)) from exc
+    if "fictional" in data and data["fictional"] is not None:
+        if is_demo_did(agent.did) and data["fictional"] is False:
+            raise _http_error(
+                400,
+                "bad_request",
+                "did:example: agents are always fictional/demo",
+            )
+        agent.fictional = "true" if data["fictional"] else "false"
+    if "capabilities" in data and data["capabilities"] is not None:
+        _replace_capabilities(db, agent, payload.capabilities or [])
+
     agent.updated_at = utcnow()
     db.commit()
     return agent_to_out(_loaded_agent(db, agent_id))

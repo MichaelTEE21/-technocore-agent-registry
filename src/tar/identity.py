@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 
+from tar.crypto import SignatureError, ed25519_public_key_from_did_key, public_key_hex
+
 # W3C did:key uses multibase base58btc (prefix `z`). Alphabet excludes 0 O I l.
 _DID_KEY_RE = re.compile(r"^did:key:z[1-9A-HJ-NP-Za-km-z]{32,128}$")
 _DID_EXAMPLE_RE = re.compile(r"^did:example:[A-Za-z0-9._:-]{1,200}$")
@@ -50,10 +52,10 @@ class IdentityProvider(ABC):
 
 
 class DidKeyIdentityProvider(IdentityProvider):
-    """Accepts only public `did:key:...` strings via format check.
+    """Accepts public ``did:key:...`` with Ed25519-pub multicodec (0xed01).
 
-    This provider never generates keys, never stores keys, and never inspects
-    key bytes beyond a conservative charset/length check.
+    Validates charset, multibase decode, and multicodec. Never generates keys,
+    never stores private keys, and never accepts PEM/seed pastes.
     """
 
     method = "key"
@@ -70,7 +72,16 @@ class DidKeyIdentityProvider(IdentityProvider):
             raise IdentityError("DidKeyIdentityProvider only accepts did:key public identifiers")
         if _DID_KEY_RE.fullmatch(value) is None:
             raise IdentityError("did:key failed public-identifier format check")
+        try:
+            ed25519_public_key_from_did_key(value)
+        except SignatureError as exc:
+            raise IdentityError(str(exc)) from exc
         return value
+
+    def extract_public_key_hex(self, did: str) -> str:
+        """Return lowercase hex of the Ed25519 public key embedded in did:key."""
+        normalized = self.validate_public_did(did)
+        return public_key_hex(ed25519_public_key_from_did_key(normalized))
 
 
 class ExampleDidIdentityProvider(IdentityProvider):
@@ -123,6 +134,11 @@ class CompositeIdentityProvider(IdentityProvider):
         if last_error:
             raise last_error
         raise IdentityError(f"Unsupported DID method: {method}")
+
+
+def is_demo_did(did: str) -> bool:
+    """True for fictional ``did:example:`` identifiers used in local demos/tests."""
+    return isinstance(did, str) and did.strip().startswith("did:example:")
 
 
 default_identity_provider = CompositeIdentityProvider()

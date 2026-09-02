@@ -8,7 +8,9 @@ The registry stores a **public DID string** and an optional **Ed25519 public key
 
 ### DidKeyIdentityProvider
 
-Accepts only `did:key:z` + base58btc. Conservative length/charset check. Rejects PEM headers, the word `private`, seeds, and anything that is not a public identifier.
+Accepts only `did:key:z` + base58btc encoding of multicodec **Ed25519-pub** (`0xed01`) + 32-byte public key. Charset check plus multibase/multicodec decode. Rejects PEM headers, the word `private`, seeds, and anything that is not a public identifier.
+
+On registration (and when the DID changes on `PUT`), the registry **derives** `Agent.public_key` as **lowercase hex of the raw 32-byte Ed25519 public key**. A manually supplied `public_key` that does not match the DID is rejected (HTTP 400 / validation error).
 
 ### ExampleDidIdentityProvider
 
@@ -18,7 +20,7 @@ Accepts `did:example:...` for **FICTIONAL** local tests (`did:example:test-resea
 
 ## Signing (generic Ed25519)
 
-Profile field `public_key` is hex-encoded 32-byte Ed25519. Messages are signed over canonical JSON. Invalid signatures are rejected.
+Profile field `public_key` is **lowercase hex-encoded 32-byte Ed25519** (not multibase). Prefer derivation from `did:key`. Messages are signed over canonical JSON and verified with the registered public key (or derived did:key material). Invalid signatures are rejected. Presence of a signature is not proof; claims ≠ verified ≠ vouched.
 
 ### Technocore DID adapter
 
