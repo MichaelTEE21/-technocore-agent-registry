@@ -5,8 +5,13 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class ConfigurationError(RuntimeError):
+    """Raised when runtime config is unsuitable for the current environment."""
 
 
 def _env(name: str, default: str | None = None) -> str | None:
@@ -14,6 +19,54 @@ def _env(name: str, default: str | None = None) -> str | None:
     if value is None or value == "":
         return default
     return value
+
+
+def is_serverless() -> bool:
+    """True on Vercel or other common serverless hosts with a read-only FS."""
+    if _env("VERCEL") == "1":
+        return True
+    if _env("VERCEL_ENV") is not None:
+        return True
+    # Typical serverless markers (fail closed when persistence is required).
+    for name in (
+        "AWS_LAMBDA_FUNCTION_NAME",
+        "FUNCTIONS_WORKER_RUNTIME",
+        "K_SERVICE",  # Cloud Run / Knative
+        "NETLIFY",
+    ):
+        if _env(name) is not None:
+            return True
+    return False
+
+
+def normalize_database_url(url: str) -> str:
+    """Rewrite bare postgres:// / postgresql:// to SQLAlchemy + psycopg2.
+
+    Neon/Vercel often inject postgres://… without a driver. Do not log the URL.
+    """
+    scheme = urlparse(url).scheme
+    if scheme == "postgres":
+        return "postgresql+psycopg2://" + url[len("postgres://") :]
+    if scheme == "postgresql":
+        return "postgresql+psycopg2://" + url[len("postgresql://") :]
+    return url
+
+
+def _is_sqlite_url(url: str) -> bool:
+    return urlparse(url).scheme.startswith("sqlite")
+
+
+def require_persistent_database(url: str) -> None:
+    """On serverless, require a non-SQLite DATABASE_URL (hosted Postgres/Neon)."""
+    if not is_serverless():
+        return
+    if not url or _is_sqlite_url(url):
+        raise ConfigurationError(
+            "Serverless/Vercel deployments require DATABASE_URL set to a hosted "
+            "Postgres (e.g. Neon) connection string. SQLite is not supported on "
+            "the read-only serverless filesystem — set DATABASE_URL in the Vercel "
+            "project environment (do not use /tmp SQLite for production)."
+        )
 
 
 @dataclass(frozen=True)
@@ -31,8 +84,12 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    db = _env("DATABASE_URL", f"sqlite:///{ROOT / 'data' / 'registry.db'}")
-    assert db is not None
+    raw = _env("DATABASE_URL")
+    if raw is None:
+        db = f"sqlite:///{ROOT / 'data' / 'registry.db'}"
+    else:
+        db = normalize_database_url(raw)
+    require_persistent_database(db)
     return Settings(
         database_url=db,
         registry_token=_env("REGISTRY_TOKEN"),

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from pathlib import Path
 
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from tar.config import settings
+from tar.config import ConfigurationError, is_serverless, settings
 from tar.models import Base, Capability
 from tar.taxonomy import list_capabilities
 
@@ -16,10 +17,27 @@ _engine: Engine | None = None
 _SessionLocal: sessionmaker[Session] | None = None
 
 
+def _ensure_sqlite_parent(url: str) -> None:
+    """Create parent dir for local SQLite files only (no-op for Postgres)."""
+    if not url.startswith("sqlite:///"):
+        return
+    db_path = Path(url.removeprefix("sqlite:///"))
+    if str(db_path) in ("", ":memory:") or str(db_path).startswith(":memory:"):
+        return
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+
 def make_engine(database_url: str | None = None) -> Engine:
     from sqlalchemy import create_engine
 
     url = database_url or settings.database_url
+    if url.startswith("sqlite") and is_serverless():
+        raise ConfigurationError(
+            "SQLite cannot be used on serverless/Vercel. Set DATABASE_URL to "
+            "hosted Postgres (e.g. Neon) in the project environment."
+        )
+    if url.startswith("sqlite"):
+        _ensure_sqlite_parent(url)
     kwargs: dict = {"pool_pre_ping": True, "future": True}
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}

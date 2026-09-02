@@ -38,7 +38,7 @@ Agent (DID, capabilities, evidence, public key, endpoint)
             → Contribution record
 ```
 
-SQLite by default. A repository/session layer is Postgres-ready via `DATABASE_URL`. Private keys never enter the database.
+SQLite by default for local use. Production (including Vercel) **requires** `DATABASE_URL` pointing at hosted Postgres/Neon — SQLite will not work on the serverless read-only filesystem. Private keys never enter the database.
 
 See [docs/architecture.md](docs/architecture.md) and [docs/protocol.md](docs/protocol.md).
 

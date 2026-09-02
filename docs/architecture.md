@@ -28,13 +28,15 @@ flowchart LR
 
 ## Database
 
-Default: `sqlite:///./data/registry.db`.
+**Local default:** `sqlite:///…/data/registry.db` (created under the project `data/` directory).
+
+**Vercel / serverless:** SQLite is not supported (read-only filesystem). You **must** set `DATABASE_URL` in the Vercel project environment to a hosted Postgres URL (e.g. Neon). Bare `postgres://` / `postgresql://` strings are normalized to `postgresql+psycopg2://`. Startup fails closed if `DATABASE_URL` is missing or still points at SQLite — there is no `/tmp` SQLite fallback. Optional: `REGISTRY_TOKEN`.
 
 Tables: `agents`, `capabilities`, `agent_capabilities`, `verification_records`, `tasks`, `task_events`, `messages`, `contributions`, plus `swarms` / `swarm_members` and a legacy `reputation_events` log.
 
 `init_db()` runs `create_all` and a small ADD COLUMN migrate for v0.1 files. No private key columns.
 
-`DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/agent_registry` uses pool_pre_ping. Bring Alembic when you promote this.
+`DATABASE_URL=postgresql+psycopg2://user:pass@localhost:5432/agent_registry` uses pool_pre_ping. Bring Alembic when you promote this.
 
 ## Signing
 
