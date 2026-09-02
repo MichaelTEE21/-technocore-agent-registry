@@ -19,6 +19,7 @@ dependencies = [
   "jinja2==3.1.6",
   "python-multipart==0.0.20",
   "cryptography==44.0.3",
+  "psycopg2-binary==2.9.12",
 ]
 
 [project.optional-dependencies]
@@ -48,3 +49,4 @@ ignore = ["E501"]
 
 [tool.vercel]
 entrypoint = "src.tar.main:app"
+
