@@ -121,6 +121,8 @@ class Task(Base):
     status: Mapped[str] = mapped_column(String(32), default="requested", index=True)
     protocol: Mapped[str] = mapped_column(String(64), default="http")
     result_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

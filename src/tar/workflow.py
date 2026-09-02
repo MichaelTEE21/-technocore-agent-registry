@@ -306,6 +306,7 @@ def accept_task(db: Session, task: Task, action: dict[str, Any]) -> Task:
         )
     _action_message(db, task, action, "ACCEPT", from_agent=agent_id, to_agent=task.requester_id)
     transition(task, "accepted")
+    task.accepted_at = utcnow()
     add_event(db, task, "accepted", agent_id)
     return task
 
@@ -349,6 +350,7 @@ def submit_result(db: Session, task: Task, action: dict[str, Any]) -> Task:
         payload = {**payload, "result": result}
     _action_message(db, task, action, "RESULT", from_agent=agent_id, to_agent=task.requester_id, payload=payload)
     transition(task, "completed")
+    task.completed_at = utcnow()
     task.result_json = json.dumps(payload.get("result", payload))
     add_event(db, task, "result", agent_id)
     add_contribution(

@@ -18,7 +18,7 @@ from tar import __version__
 from tar.api import router
 from tar.config import load_settings
 from tar.db import get_session_factory, init_db
-from tar.models import Agent, AgentCapability, Contribution, Message, Swarm, Task
+from tar.models import Agent, AgentCapability, Contribution, Message, Swarm, Task, TaskEvent
 from tar.present import (
     EXAMPLE_MESSAGE,
     avatar_spec,
@@ -34,9 +34,22 @@ from tar.present import (
 )
 from tar.ranking import RANKING_DOC, rank_agents
 from tar.security import RequestLimitMiddleware, error_body
-from tar.serialize import agent_to_out, contribution_to_out, swarm_to_out, task_to_out
+from tar.serialize import (
+    agent_to_out,
+    contribution_to_out,
+    message_to_out,
+    swarm_to_out,
+    task_to_out,
+)
 from tar.taxonomy import all_categories, get_capability, list_capabilities
-from tar.workflow import signature_status_for
+from tar.workflow import (
+    WorkflowError,
+    accept_task,
+    create_task,
+    reject_task,
+    signature_status_for,
+    submit_result,
+)
 
 PACKAGE = Path(__file__).resolve().parent
 REPO = PACKAGE.parent.parent
@@ -731,6 +744,210 @@ def create_app() -> FastAPI:
                     "version": __version__,
                 },
             )
+        finally:
+            db.close()
+
+    @app.get("/ui/communicate", include_in_schema=False)
+    def communicate_page(request: Request):
+        from tar.schemas import TaskEventOut, TaskHistoryOut
+        from tar.taxonomy import known_capability_ids
+
+        db = get_session_factory()()
+        try:
+            agents = list(
+                db.scalars(
+                    select(Agent).options(selectinload(Agent.capabilities)).order_by(Agent.id)
+                )
+            )
+            requester_id = (request.query_params.get("requester") or "").strip()
+            assignee_id = (request.query_params.get("assignee") or "").strip()
+            capability = (request.query_params.get("capability") or "").strip()
+            task_id = (request.query_params.get("task_id") or "").strip()
+            notice = request.query_params.get("notice") or None
+            error = request.query_params.get("error") or None
+            target = None
+            if assignee_id:
+                row = next((a for a in agents if a.id == assignee_id), None)
+                if row is not None:
+                    target = agent_to_out(row)
+            task = None
+            history = None
+            if task_id:
+                trow = db.get(Task, task_id)
+                if trow is not None:
+                    task = task_to_out(trow)
+                    events = list(
+                        db.scalars(
+                            select(TaskEvent)
+                            .where(TaskEvent.task_id == task_id)
+                            .order_by(TaskEvent.created_at.asc(), TaskEvent.id.asc())
+                        )
+                    )
+                    msgs = list(
+                        db.scalars(
+                            select(Message)
+                            .where(Message.task_id == task_id)
+                            .order_by(Message.created_at.asc(), Message.id.asc())
+                        )
+                    )
+                    history = TaskHistoryOut(
+                        task_id=task_id,
+                        task=task,
+                        events=[
+                            TaskEventOut(
+                                id=e.id,
+                                task_id=e.task_id,
+                                event=e.event,
+                                actor_id=e.actor_id,
+                                detail=e.detail or "",
+                                created_at=e.created_at,
+                            )
+                            for e in events
+                        ],
+                        messages=[message_to_out(m) for m in msgs],
+                    )
+            return TEMPLATES.TemplateResponse(
+                request,
+                "communicate.html",
+                {
+                    "agents": [agent_to_out(a) for a in agents],
+                    "requester_id": requester_id,
+                    "assignee_id": assignee_id,
+                    "capability": capability,
+                    "description": request.query_params.get("description") or "",
+                    "target": target,
+                    "task": task,
+                    "history": history,
+                    "capability_ids": sorted(known_capability_ids()),
+                    "notice": notice,
+                    "error": error,
+                    "result_text": "",
+                    "version": __version__,
+                },
+            )
+        finally:
+            db.close()
+
+    @app.post("/ui/communicate", include_in_schema=False)
+    async def communicate_submit(request: Request):
+        import json as _json
+
+        from fastapi.responses import RedirectResponse
+
+        form = await request.form()
+        action = str(form.get("action") or "").strip()
+        requester = str(form.get("requester") or "").strip()
+        assignee = str(form.get("assignee") or "").strip()
+        capability = str(form.get("capability") or "").strip()
+        description = str(form.get("description") or "").strip()
+        task_id = str(form.get("task_id") or "").strip()
+        agent_id = str(form.get("agent_id") or "").strip()
+        result_text = str(form.get("result_text") or "").strip()
+
+        def _redirect(**params: str) -> RedirectResponse:
+            from urllib.parse import urlencode
+
+            q = {k: v for k, v in params.items() if v}
+            return RedirectResponse(url=f"/ui/communicate?{urlencode(q)}", status_code=303)
+
+        db = get_session_factory()()
+        try:
+            try:
+                if action == "create":
+                    task = create_task(
+                        db,
+                        requester=requester,
+                        requested_capability=capability,
+                        description=description
+                        or "Analyse the tokenomics of Project X.",
+                        assignee=assignee or None,
+                    )
+                    db.commit()
+                    return _redirect(
+                        requester=requester,
+                        assignee=assignee,
+                        capability=capability,
+                        task_id=task.id,
+                        notice=f"Task {task.id} created (REQUEST).",
+                    )
+                task = db.get(Task, task_id) if task_id else None
+                if task is None:
+                    return _redirect(
+                        requester=requester,
+                        assignee=assignee,
+                        capability=capability,
+                        error="Task not found.",
+                    )
+                if action == "accept":
+                    accept_task(db, task, {"agent_id": agent_id or task.assignee_id})
+                    db.commit()
+                    return _redirect(
+                        requester=requester or task.requester_id,
+                        assignee=assignee or (task.assignee_id or ""),
+                        capability=capability or task.requested_capability,
+                        task_id=task.id,
+                        notice="Task accepted.",
+                    )
+                if action == "reject":
+                    reject_task(db, task, {"agent_id": agent_id or task.assignee_id})
+                    db.commit()
+                    return _redirect(
+                        requester=requester or task.requester_id,
+                        assignee=assignee or (task.assignee_id or ""),
+                        capability=capability or task.requested_capability,
+                        task_id=task.id,
+                        notice="Task rejected.",
+                    )
+                if action == "submit":
+                    result: object
+                    if result_text:
+                        try:
+                            result = _json.loads(result_text)
+                        except _json.JSONDecodeError:
+                            result = {
+                                "summary": result_text,
+                                "token_supply": "TBD",
+                                "allocation": "TBD",
+                                "vesting": "TBD",
+                            }
+                    else:
+                        result = {
+                            "summary": "Demo tokenomics placeholder for Project X.",
+                            "token_supply": "1_000_000_000",
+                            "allocation": "Team 20% · Community 40% · Treasury 40%",
+                            "vesting": "24-month linear with 6-month cliff",
+                        }
+                    submit_result(
+                        db,
+                        task,
+                        {
+                            "agent_id": agent_id or task.assignee_id,
+                            "result": result,
+                        },
+                    )
+                    db.commit()
+                    return _redirect(
+                        requester=requester or task.requester_id,
+                        assignee=assignee or (task.assignee_id or ""),
+                        capability=capability or task.requested_capability,
+                        task_id=task.id,
+                        notice="Result submitted (SUBMIT/RESULT).",
+                    )
+                return _redirect(
+                    requester=requester,
+                    assignee=assignee,
+                    capability=capability,
+                    error=f"Unknown action: {action}",
+                )
+            except WorkflowError as exc:
+                db.rollback()
+                return _redirect(
+                    requester=requester,
+                    assignee=assignee,
+                    capability=capability,
+                    task_id=task_id,
+                    error=str(exc),
+                )
         finally:
             db.close()
 

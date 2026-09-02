@@ -432,7 +432,16 @@ class TaskCreate(IgnoreExtras):
     requester: str = Field(min_length=1, max_length=128)
     requested_capability: str = Field(min_length=1, max_length=128)
     description: str = Field(default="", max_length=8000)
-    assignee: str | None = Field(default=None, max_length=128)
+    assignee: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Target/worker agent id (DB column assignee_id). Synonym: target_agent_id.",
+    )
+    target_agent_id: str | None = Field(
+        default=None,
+        max_length=128,
+        description="API synonym for assignee / assignee_id (target agent).",
+    )
     protocol: str = Field(default="http", max_length=64)
     task_id: str | None = Field(default=None, max_length=128)
 
@@ -448,6 +457,21 @@ class TaskCreate(IgnoreExtras):
     def reject_key_material(cls, data: Any) -> Any:
         _assert_no_secrets(data)
         return data
+
+    @model_validator(mode="after")
+    def alias_target_agent(self) -> TaskCreate:
+        """target_agent_id is a synonym for assignee; keep DB column assignee_id."""
+        if self.assignee is None and self.target_agent_id:
+            self.assignee = self.target_agent_id
+        elif self.target_agent_id is None and self.assignee:
+            self.target_agent_id = self.assignee
+        elif (
+            self.assignee
+            and self.target_agent_id
+            and self.assignee != self.target_agent_id
+        ):
+            raise ValueError("assignee and target_agent_id must match when both set")
+        return self
 
 
 class TaskAction(IgnoreExtras):
@@ -472,11 +496,17 @@ class TaskOut(IgnoreExtras):
     task_id: str
     requester: str
     assignee: str | None
+    target_agent_id: str | None = Field(
+        default=None,
+        description="Synonym for assignee (DB column assignee_id).",
+    )
     requested_capability: str
     description: str
     status: TaskStatus
     protocol: str
     result: dict[str, Any] | None = None
+    accepted_at: datetime | None = None
+    completed_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -524,6 +554,24 @@ class MessageOut(IgnoreExtras):
 class MessageList(IgnoreExtras):
     items: list[MessageOut]
     count: int
+
+
+class TaskEventOut(IgnoreExtras):
+    id: int
+    task_id: str
+    event: str
+    actor_id: str | None = None
+    detail: str = ""
+    created_at: datetime | None = None
+
+
+class TaskHistoryOut(IgnoreExtras):
+    """Combined events + messages for a task (GET /tasks/{id}/history)."""
+
+    task_id: str
+    task: TaskOut
+    events: list[TaskEventOut]
+    messages: list[MessageOut]
 
 
 class ContributionCreate(IgnoreExtras):

@@ -22,6 +22,7 @@ from tar.models import (
     Swarm,
     SwarmMember,
     Task,
+    TaskEvent,
     VerificationRecord,
     utcnow,
 )
@@ -48,6 +49,8 @@ from tar.schemas import (
     SwarmPropose,
     TaskAction,
     TaskCreate,
+    TaskEventOut,
+    TaskHistoryOut,
     TaskList,
     TaskOut,
     TaskResultAction,
@@ -648,6 +651,56 @@ def post_verify_task(task_id: str, payload: TaskAction, db: Db, _: Auth) -> Task
 @router.post("/tasks/{task_id}/dispute", response_model=TaskOut, tags=["tasks"])
 def post_dispute_task(task_id: str, payload: TaskAction, db: Db, _: Auth) -> TaskOut:
     return _run_task_action(db, task_id, dispute_task, payload)
+
+
+@router.post("/tasks/{task_id}/submit", response_model=TaskOut, tags=["tasks"])
+def post_submit(task_id: str, payload: TaskResultAction, db: Db, _: Auth) -> TaskOut:
+    """SUBMIT alias for RESULT (product brief naming). Same as POST /tasks/{id}/result."""
+    return _run_task_action(db, task_id, submit_result, payload)
+
+
+@router.get("/tasks/{task_id}/history", response_model=TaskHistoryOut, tags=["tasks"])
+def get_task_history(task_id: str, db: Db) -> TaskHistoryOut:
+    """Events + messages for a task (ordered). Also available as /tasks/{id}/events."""
+    task = db.get(Task, task_id)
+    if task is None:
+        raise _http_error(404, "not_found", f"task not found: {task_id}")
+    events = list(
+        db.scalars(
+            select(TaskEvent)
+            .where(TaskEvent.task_id == task_id)
+            .order_by(TaskEvent.created_at.asc(), TaskEvent.id.asc())
+        )
+    )
+    messages = list(
+        db.scalars(
+            select(Message)
+            .where(Message.task_id == task_id)
+            .order_by(Message.created_at.asc(), Message.id.asc())
+        )
+    )
+    return TaskHistoryOut(
+        task_id=task_id,
+        task=task_to_out(task),
+        events=[
+            TaskEventOut(
+                id=e.id,
+                task_id=e.task_id,
+                event=e.event,
+                actor_id=e.actor_id,
+                detail=e.detail or "",
+                created_at=e.created_at,
+            )
+            for e in events
+        ],
+        messages=[message_to_out(m) for m in messages],
+    )
+
+
+@router.get("/tasks/{task_id}/events", response_model=TaskHistoryOut, tags=["tasks"])
+def get_task_events(task_id: str, db: Db) -> TaskHistoryOut:
+    """Alias of /tasks/{id}/history — events + messages queryable together."""
+    return get_task_history(task_id, db)
 
 
 @router.post("/messages", status_code=status.HTTP_201_CREATED, tags=["messages"])

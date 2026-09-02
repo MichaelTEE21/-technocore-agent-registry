@@ -107,11 +107,14 @@ def task_to_out(task: Task) -> TaskOut:
         task_id=task.id,
         requester=task.requester_id,
         assignee=task.assignee_id,
+        target_agent_id=task.assignee_id,
         requested_capability=task.requested_capability,
         description=task.description,
         status=task.status,  # type: ignore[arg-type]
         protocol=task.protocol,
         result=result,
+        accepted_at=getattr(task, "accepted_at", None),
+        completed_at=getattr(task, "completed_at", None),
         created_at=task.created_at,
         updated_at=task.updated_at,
     )

@@ -48,6 +48,7 @@
     </div>
     <div class="card-actions">
       <a class="btn btn-ghost" href="/ui/agents/{{ item.agent.id }}">View Agent</a>
+      <a class="btn" href="/ui/communicate?assignee={{ item.agent.id }}{% if item.matched %}&capability={{ item.matched[0] }}{% elif capabilities %}&capability={{ capabilities[0] }}{% endif %}">Request task</a>
     </div>
   </article>
   {% endfor %}

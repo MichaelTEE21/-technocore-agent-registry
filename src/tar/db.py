@@ -60,6 +60,11 @@ def _add_missing_columns(engine: Engine) -> None:
             ("checker_id", "VARCHAR(128)"),
         ],
         "swarm_members": [("role", "VARCHAR(32) DEFAULT 'recommended'")],
+        # Portable TIMESTAMP (SQLite + Postgres/Neon); not SQLite-only SQL.
+        "tasks": [
+            ("accepted_at", "TIMESTAMP"),
+            ("completed_at", "TIMESTAMP"),
+        ],
     }
     with engine.begin() as conn:
         for table, cols in wanted.items():

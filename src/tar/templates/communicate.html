@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block title %}Communicate · Technocore Agent Registry{% endblock %}
+{% block body %}
+<p class="kicker">A2A · REGISTRY-MEDIATED</p>
+<h1>Agent-to-agent task</h1>
+<p class="note">
+  Local registry only — no outbound HTTP to agent endpoints.
+  Not official FLOP. Messages: REQUEST → ACCEPT|REJECT → RESULT (SUBMIT alias).
+  Public DID only; never paste private keys.
+</p>
+
+{% if error %}
+<div class="card error-card"><p class="fictional">ERROR</p><p>{{ error }}</p></div>
+{% endif %}
+{% if notice %}
+<div class="card"><p class="flag">OK</p><p>{{ notice }}</p></div>
+{% endif %}
+
+<form class="filters" method="get" action="/ui/communicate">
+  <label class="field">Requester (Agent A)
+    <select name="requester" aria-label="Requester agent">
+      <option value="">— select —</option>
+      {% for a in agents %}
+      <option value="{{ a.id }}" {% if requester_id == a.id %}selected{% endif %}>{{ a.name }} ({{ a.id }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="field">Target (Agent B)
+    <select name="assignee" aria-label="Target agent">
+      <option value="">— select —</option>
+      {% for a in agents %}
+      <option value="{{ a.id }}" {% if assignee_id == a.id %}selected{% endif %}>{{ a.name }} ({{ a.id }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="field">Capability
+    <input type="text" name="capability" value="{{ capability or '' }}" placeholder="e.g. tokenomics-analysis" list="cap-list" aria-label="Capability">
+    <datalist id="cap-list">
+      {% for c in capability_ids %}
+      <option value="{{ c }}">
+      {% endfor %}
+    </datalist>
+  </label>
+  <button class="btn" type="submit">Load</button>
+  <a class="btn btn-ghost" href="/ui/discover{% if capability %}?q={{ capability }}{% endif %}">Discover by capability</a>
+</form>
+
+{% if target %}
+<section class="card">
+  <p class="flag">TARGET CAPABILITIES</p>
+  <h2 style="margin:0.2rem 0;font-size:1.15rem;"><a href="/ui/agents/{{ target.id }}">{{ target.name }}</a></h2>
+  <div class="chips">
+    {% for cap in target.capabilities %}
+    <a class="chip" href="/ui/communicate?requester={{ requester_id }}&assignee={{ target.id }}&capability={{ cap.id }}">{{ cap.id }}</a>
+    {% else %}
+    <span class="note">No capabilities advertised.</span>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if requester_id and assignee_id %}
+<section class="card">
+  <p class="flag">SEND TASK</p>
+  <form method="post" action="/ui/communicate">
+    <input type="hidden" name="action" value="create">
+    <input type="hidden" name="requester" value="{{ requester_id }}">
+    <input type="hidden" name="assignee" value="{{ assignee_id }}">
+    <label class="field">Capability
+      <input type="text" name="capability" required value="{{ capability or '' }}" placeholder="tokenomics-analysis">
+    </label>
+    <label class="field">Description
+      <textarea name="description" rows="3" maxlength="8000" placeholder="Analyse the tokenomics of Project X.">{{ description or '' }}</textarea>
+    </label>
+    <div class="card-actions">
+      <button class="btn" type="submit">Send TASK (REQUEST)</button>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+{% if task %}
+<section class="card">
+  <p class="flag">{{ task.status }}</p>
+  <h2 style="margin:0.2rem 0;font-size:1.15rem;"><a href="/ui/tasks/{{ task.task_id }}">{{ task.task_id }}</a></h2>
+  <dl class="facts">
+    <dt>Requester</dt><dd>{{ task.requester }}</dd>
+    <dt>Target</dt><dd>{{ task.assignee or task.target_agent_id or "—" }}</dd>
+    <dt>Capability</dt><dd>{{ task.requested_capability }}</dd>
+    <dt>Accepted at</dt><dd>{{ task.accepted_at or "—" }}</dd>
+    <dt>Completed at</dt><dd>{{ task.completed_at or "—" }}</dd>
+    <dt>Description</dt><dd>{{ task.description }}</dd>
+  </dl>
+  {% if task.result %}
+  <h3>Result</h3>
+  <pre>{{ task.result }}</pre>
+  {% endif %}
+
+  <div class="card-actions" style="flex-wrap:wrap;gap:0.5rem;">
+    {% if task.status == 'requested' %}
+    <form method="post" action="/ui/communicate" style="display:inline;">
+      <input type="hidden" name="action" value="accept">
+      <input type="hidden" name="task_id" value="{{ task.task_id }}">
+      <input type="hidden" name="agent_id" value="{{ task.assignee }}">
+      <input type="hidden" name="requester" value="{{ requester_id }}">
+      <input type="hidden" name="assignee" value="{{ assignee_id }}">
+      <input type="hidden" name="capability" value="{{ capability or task.requested_capability }}">
+      <button class="btn" type="submit">ACCEPT (as B)</button>
+    </form>
+    <form method="post" action="/ui/communicate" style="display:inline;">
+      <input type="hidden" name="action" value="reject">
+      <input type="hidden" name="task_id" value="{{ task.task_id }}">
+      <input type="hidden" name="agent_id" value="{{ task.assignee }}">
+      <input type="hidden" name="requester" value="{{ requester_id }}">
+      <input type="hidden" name="assignee" value="{{ assignee_id }}">
+      <input type="hidden" name="capability" value="{{ capability or task.requested_capability }}">
+      <button class="btn btn-ghost" type="submit">REJECT (as B)</button>
+    </form>
+    {% endif %}
+    {% if task.status in ('accepted', 'in_progress') %}
+    <form method="post" action="/ui/communicate">
+      <input type="hidden" name="action" value="submit">
+      <input type="hidden" name="task_id" value="{{ task.task_id }}">
+      <input type="hidden" name="agent_id" value="{{ task.assignee }}">
+      <input type="hidden" name="requester" value="{{ requester_id }}">
+      <input type="hidden" name="assignee" value="{{ assignee_id }}">
+      <input type="hidden" name="capability" value="{{ capability or task.requested_capability }}">
+      <label class="field">Result (JSON or text)
+        <textarea name="result_text" rows="4" placeholder='{"token_supply":"…","allocation":"…","vesting":"…"}'>{{ result_text or '' }}</textarea>
+      </label>
+      <button class="btn" type="submit">SUBMIT result (as B)</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
+{% if history %}
+<section>
+  <h2>Message / event history</h2>
+  <ol class="timeline">
+    {% for e in history.events %}
+    <li>
+      <div><strong>event:{{ e.event }}</strong> · actor {{ e.actor_id or "—" }}</div>
+      <div class="note">{{ e.created_at }} · {{ e.detail }}</div>
+    </li>
+    {% endfor %}
+    {% for m in history.messages %}
+    <li>
+      <div><strong>{{ m.type }}</strong> · {{ m.from_agent }} → {{ m.to_agent }}</div>
+      <div class="note"><code>{{ m.message_id }}</code> · {{ m.timestamp }}</div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% if not history.events and not history.messages %}
+  <p class="note">No history yet.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% elif not agents %}
+  {{ empty("No agents registered.", "Register agents first, then return here to send a directed task.") }}
+{% endif %}
+{% endblock %}
