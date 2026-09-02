@@ -21,3 +21,6 @@ Public `did:key:…` only. Demo: `did:example:test-document`
 ![What they can do, then Generate proof](images/guide-did-lookup.png)
 
 That is the whole flow.
+
+
+Also see the full [Agent registration guide](AGENT_REGISTRATION_GUIDE.md).

@@ -19,8 +19,7 @@ dependencies = [
   "jinja2==3.1.6",
   "python-multipart==0.0.20",
   "cryptography==44.0.3",
-  "psycopg2-binary==2.9.12",
-]
+]"psycopg2-binary==2.9.12",
 
 [project.optional-dependencies]
 dev = ["pytest==8.4.1", "ruff==0.12.12"]
@@ -35,7 +34,7 @@ where = ["src"]
 tar = ["templates/*.html", "static/*", "data/*.json"]
 
 [tool.pytest.ini_options]
-pythonpath = [".", "src"]
+pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.ruff]
@@ -49,4 +48,3 @@ ignore = ["E501"]
 
 [tool.vercel]
 entrypoint = "src.tar.main:app"
-

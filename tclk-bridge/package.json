@@ -1,0 +1,16 @@
+{
+  "name": "technocore-tclk-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "JSON stdin/stdout CLI wrapping @flop-labs/tclk — no reinvented state machine",
+  "type": "module",
+  "bin": {
+    "tclk-bridge": "./bin/tclk-bridge.mjs"
+  },
+  "dependencies": {
+    "@flop-labs/tclk": "0.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

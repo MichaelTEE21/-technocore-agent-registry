@@ -1,8 +1,9 @@
 """SQLAlchemy models. SQLite by default; the session factory is Postgres-ready.
 
 Tables: agents, capabilities, agent_capabilities, verification_records,
-tasks, task_events, messages, contributions — plus swarms and a legacy
-reputation_events log. Private keys are never stored.
+tasks, task_events, messages, contributions — plus swarms, tclk rooms/
+transcript/contracts, and a legacy reputation_events log. Private keys
+and preimages are never stored.
 """
 
 from __future__ import annotations
@@ -204,3 +205,58 @@ class SwarmMember(Base):
     role: Mapped[str] = mapped_column(String(32), default="recommended", server_default="recommended")
 
     swarm: Mapped[Swarm] = relationship(back_populates="members")
+
+class TclkRoom(Base):
+    """Registry-mediated tclk coordination room (offers or deal mailbox)."""
+
+    __tablename__ = "tclk_rooms"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32), default="offers", index=True)
+    contract_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class TclkTranscript(Base):
+    """Append-only frame log. Secrets/preimages are never stored."""
+
+    __tablename__ = "tclk_transcript"
+    __table_args__ = (UniqueConstraint("room_id", "seq", name="uq_tclk_room_seq"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    room_id: Mapped[str] = mapped_column(ForeignKey("tclk_rooms.id", ondelete="CASCADE"), index=True)
+    seq: Mapped[int] = mapped_column()
+    frame_type: Mapped[str] = mapped_column(String(32), index=True)
+    from_did: Mapped[str] = mapped_column(String(512), index=True)
+    agent_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    frame_json: Mapped[str] = mapped_column(Text, default="{}")
+    line_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    signature: Mapped[str | None] = mapped_column(Text, nullable=True)
+    signature_status: Mapped[str] = mapped_column(String(32), default="unsigned")
+    contract_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class TclkContract(Base):
+    """Cached protocol state derived from signed frames via @flop-labs/tclk.
+
+    settlement_status is independent of protocol status — PaperRail is unverified
+    choreography only and never implies economic settlement.
+    """
+
+    __tablename__ = "tclk_contracts"
+
+    contract_id: Mapped[str] = mapped_column(String(160), primary_key=True)
+    offer_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="proposed", index=True)
+    state_json: Mapped[str] = mapped_column(Text, default="{}")
+    payer_did: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    payee_did: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    rail: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    rail_ref: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    settlement_status: Mapped[str] = mapped_column(String(32), default="unverified")
+    paper_only: Mapped[str] = mapped_column(String(8), default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )

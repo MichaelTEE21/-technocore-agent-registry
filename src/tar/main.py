@@ -42,6 +42,7 @@ from tar.serialize import (
     task_to_out,
 )
 from tar.taxonomy import all_categories, get_capability, list_capabilities
+from tar.tclk_api import router as tclk_router
 from tar.workflow import (
     WorkflowError,
     accept_task,
@@ -109,6 +110,7 @@ def create_app() -> FastAPI:
         per_minute=settings.rate_limit_per_minute,
     )
     app.include_router(router)
+    app.include_router(tclk_router)
 
     if STATIC.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
@@ -985,6 +987,64 @@ def create_app() -> FastAPI:
             "developers.html",
             {"version": __version__},
         )
+
+
+    @app.get("/ui/tclk", include_in_schema=False)
+    def tclk_ui(request: Request):
+        import json as _json
+
+        from tar.models import TclkContract, TclkRoom
+        from tar.tclk import (
+            OFFER_ROOM_ID,
+            agents_advertising_tclk,
+            ensure_offer_room,
+            list_transcript,
+        )
+
+        db = get_session_factory()()
+        try:
+            ensure_offer_room(db)
+            db.commit()
+            room_id = (request.query_params.get("room") or OFFER_ROOM_ID).strip()
+            contract_id = (request.query_params.get("contract") or "").strip()
+            rooms = list(db.scalars(select(TclkRoom).order_by(TclkRoom.id)))
+            transcript = list_transcript(db, room_id) if db.get(TclkRoom, room_id) else []
+            contract = db.get(TclkContract, contract_id) if contract_id else None
+            contract_view = None
+            if contract is not None:
+                try:
+                    state = _json.loads(contract.state_json or "{}")
+                except _json.JSONDecodeError:
+                    state = {}
+                if isinstance(state, dict):
+                    state.pop("secret", None)
+                contract_view = {
+                    "contract_id": contract.contract_id,
+                    "protocol_status": contract.status,
+                    "settlement_status": contract.settlement_status,
+                    "paper_only": contract.paper_only == "true",
+                    "rail": contract.rail,
+                    "rail_ref": contract.rail_ref,
+                    "payer_did": contract.payer_did,
+                    "payee_did": contract.payee_did,
+                    "state": state,
+                }
+            advertisers = [agent_to_out(a) for a in agents_advertising_tclk(db)]
+            return TEMPLATES.TemplateResponse(
+                request,
+                "tclk.html",
+                {
+                    "rooms": rooms,
+                    "room_id": room_id,
+                    "transcript": transcript,
+                    "contract": contract_view,
+                    "contract_id": contract_id,
+                    "advertisers": advertisers,
+                    "version": __version__,
+                },
+            )
+        finally:
+            db.close()
 
     return app
 

@@ -123,6 +123,7 @@ Then open:
 - Contributions / proof: http://127.0.0.1:8080/ui/contributions
 - Protocol: http://127.0.0.1:8080/ui/protocol
 - Developers: http://127.0.0.1:8080/ui/developers
+- Agent registration guide (repo): docs/AGENT_REGISTRATION_GUIDE.md
 - Swarms: http://127.0.0.1:8080/ui/swarms
 - OpenAPI: http://127.0.0.1:8080/docs
 - Health: http://127.0.0.1:8080/healthz
@@ -249,4 +250,4 @@ See [docs/roadmap.md](docs/roadmap.md). Short version: optional DID resolution, 
 
 MIT © 2026 MichaelTEE21. See [LICENSE](LICENSE).
 
-Further reading: [architecture](docs/architecture.md) · [protocol](docs/protocol.md) · [identity](docs/identity.md) · [verification](docs/verification.md) · [api](docs/api.md) · [capabilities](docs/capabilities.md)
+Further reading: [**Agent registration guide**](docs/AGENT_REGISTRATION_GUIDE.md) · [architecture](docs/architecture.md) · [protocol](docs/protocol.md) · [identity](docs/identity.md) · [verification](docs/verification.md) · [api](docs/api.md) · [capabilities](docs/capabilities.md)
